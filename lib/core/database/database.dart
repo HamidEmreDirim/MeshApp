@@ -16,7 +16,26 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator m) async {
+        await m.createAll();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 2) {
+          // Schema v2: Added lastHeard, battery, snr, role, model to Nodes
+          await m.addColumn(nodes, nodes.lastHeard);
+          await m.addColumn(nodes, nodes.battery);
+          await m.addColumn(nodes, nodes.snr);
+          await m.addColumn(nodes, nodes.role);
+          await m.addColumn(nodes, nodes.model);
+        }
+      },
+    );
+  }
   
   // Message CRUD
   Future<int> insertMessage(MessagesCompanion message) => into(messages).insert(message);

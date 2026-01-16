@@ -430,8 +430,66 @@ class $NodesTable extends Nodes with TableInfo<$NodesTable, Node> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _lastHeardMeta = const VerificationMeta(
+    'lastHeard',
+  );
   @override
-  List<GeneratedColumn> get $columns => [num, shortName, longName];
+  late final GeneratedColumn<DateTime> lastHeard = GeneratedColumn<DateTime>(
+    'last_heard',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _batteryMeta = const VerificationMeta(
+    'battery',
+  );
+  @override
+  late final GeneratedColumn<int> battery = GeneratedColumn<int>(
+    'battery',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _snrMeta = const VerificationMeta('snr');
+  @override
+  late final GeneratedColumn<double> snr = GeneratedColumn<double>(
+    'snr',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _modelMeta = const VerificationMeta('model');
+  @override
+  late final GeneratedColumn<String> model = GeneratedColumn<String>(
+    'model',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    num,
+    shortName,
+    longName,
+    lastHeard,
+    battery,
+    snr,
+    role,
+    model,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -462,6 +520,36 @@ class $NodesTable extends Nodes with TableInfo<$NodesTable, Node> {
         longName.isAcceptableOrUnknown(data['long_name']!, _longNameMeta),
       );
     }
+    if (data.containsKey('last_heard')) {
+      context.handle(
+        _lastHeardMeta,
+        lastHeard.isAcceptableOrUnknown(data['last_heard']!, _lastHeardMeta),
+      );
+    }
+    if (data.containsKey('battery')) {
+      context.handle(
+        _batteryMeta,
+        battery.isAcceptableOrUnknown(data['battery']!, _batteryMeta),
+      );
+    }
+    if (data.containsKey('snr')) {
+      context.handle(
+        _snrMeta,
+        snr.isAcceptableOrUnknown(data['snr']!, _snrMeta),
+      );
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+        _roleMeta,
+        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+      );
+    }
+    if (data.containsKey('model')) {
+      context.handle(
+        _modelMeta,
+        model.isAcceptableOrUnknown(data['model']!, _modelMeta),
+      );
+    }
     return context;
   }
 
@@ -483,6 +571,26 @@ class $NodesTable extends Nodes with TableInfo<$NodesTable, Node> {
         DriftSqlType.string,
         data['${effectivePrefix}long_name'],
       ),
+      lastHeard: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_heard'],
+      ),
+      battery: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}battery'],
+      ),
+      snr: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}snr'],
+      ),
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      ),
+      model: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model'],
+      ),
     );
   }
 
@@ -496,7 +604,21 @@ class Node extends DataClass implements Insertable<Node> {
   final int num;
   final String? shortName;
   final String? longName;
-  const Node({required this.num, this.shortName, this.longName});
+  final DateTime? lastHeard;
+  final int? battery;
+  final double? snr;
+  final String? role;
+  final String? model;
+  const Node({
+    required this.num,
+    this.shortName,
+    this.longName,
+    this.lastHeard,
+    this.battery,
+    this.snr,
+    this.role,
+    this.model,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -506,6 +628,21 @@ class Node extends DataClass implements Insertable<Node> {
     }
     if (!nullToAbsent || longName != null) {
       map['long_name'] = Variable<String>(longName);
+    }
+    if (!nullToAbsent || lastHeard != null) {
+      map['last_heard'] = Variable<DateTime>(lastHeard);
+    }
+    if (!nullToAbsent || battery != null) {
+      map['battery'] = Variable<int>(battery);
+    }
+    if (!nullToAbsent || snr != null) {
+      map['snr'] = Variable<double>(snr);
+    }
+    if (!nullToAbsent || role != null) {
+      map['role'] = Variable<String>(role);
+    }
+    if (!nullToAbsent || model != null) {
+      map['model'] = Variable<String>(model);
     }
     return map;
   }
@@ -519,6 +656,17 @@ class Node extends DataClass implements Insertable<Node> {
       longName: longName == null && nullToAbsent
           ? const Value.absent()
           : Value(longName),
+      lastHeard: lastHeard == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastHeard),
+      battery: battery == null && nullToAbsent
+          ? const Value.absent()
+          : Value(battery),
+      snr: snr == null && nullToAbsent ? const Value.absent() : Value(snr),
+      role: role == null && nullToAbsent ? const Value.absent() : Value(role),
+      model: model == null && nullToAbsent
+          ? const Value.absent()
+          : Value(model),
     );
   }
 
@@ -531,6 +679,11 @@ class Node extends DataClass implements Insertable<Node> {
       num: serializer.fromJson<int>(json['num']),
       shortName: serializer.fromJson<String?>(json['shortName']),
       longName: serializer.fromJson<String?>(json['longName']),
+      lastHeard: serializer.fromJson<DateTime?>(json['lastHeard']),
+      battery: serializer.fromJson<int?>(json['battery']),
+      snr: serializer.fromJson<double?>(json['snr']),
+      role: serializer.fromJson<String?>(json['role']),
+      model: serializer.fromJson<String?>(json['model']),
     );
   }
   @override
@@ -540,6 +693,11 @@ class Node extends DataClass implements Insertable<Node> {
       'num': serializer.toJson<int>(num),
       'shortName': serializer.toJson<String?>(shortName),
       'longName': serializer.toJson<String?>(longName),
+      'lastHeard': serializer.toJson<DateTime?>(lastHeard),
+      'battery': serializer.toJson<int?>(battery),
+      'snr': serializer.toJson<double?>(snr),
+      'role': serializer.toJson<String?>(role),
+      'model': serializer.toJson<String?>(model),
     };
   }
 
@@ -547,16 +705,31 @@ class Node extends DataClass implements Insertable<Node> {
     int? num,
     Value<String?> shortName = const Value.absent(),
     Value<String?> longName = const Value.absent(),
+    Value<DateTime?> lastHeard = const Value.absent(),
+    Value<int?> battery = const Value.absent(),
+    Value<double?> snr = const Value.absent(),
+    Value<String?> role = const Value.absent(),
+    Value<String?> model = const Value.absent(),
   }) => Node(
     num: num ?? this.num,
     shortName: shortName.present ? shortName.value : this.shortName,
     longName: longName.present ? longName.value : this.longName,
+    lastHeard: lastHeard.present ? lastHeard.value : this.lastHeard,
+    battery: battery.present ? battery.value : this.battery,
+    snr: snr.present ? snr.value : this.snr,
+    role: role.present ? role.value : this.role,
+    model: model.present ? model.value : this.model,
   );
   Node copyWithCompanion(NodesCompanion data) {
     return Node(
       num: data.num.present ? data.num.value : this.num,
       shortName: data.shortName.present ? data.shortName.value : this.shortName,
       longName: data.longName.present ? data.longName.value : this.longName,
+      lastHeard: data.lastHeard.present ? data.lastHeard.value : this.lastHeard,
+      battery: data.battery.present ? data.battery.value : this.battery,
+      snr: data.snr.present ? data.snr.value : this.snr,
+      role: data.role.present ? data.role.value : this.role,
+      model: data.model.present ? data.model.value : this.model,
     );
   }
 
@@ -565,45 +738,89 @@ class Node extends DataClass implements Insertable<Node> {
     return (StringBuffer('Node(')
           ..write('num: $num, ')
           ..write('shortName: $shortName, ')
-          ..write('longName: $longName')
+          ..write('longName: $longName, ')
+          ..write('lastHeard: $lastHeard, ')
+          ..write('battery: $battery, ')
+          ..write('snr: $snr, ')
+          ..write('role: $role, ')
+          ..write('model: $model')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(num, shortName, longName);
+  int get hashCode => Object.hash(
+    num,
+    shortName,
+    longName,
+    lastHeard,
+    battery,
+    snr,
+    role,
+    model,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Node &&
           other.num == this.num &&
           other.shortName == this.shortName &&
-          other.longName == this.longName);
+          other.longName == this.longName &&
+          other.lastHeard == this.lastHeard &&
+          other.battery == this.battery &&
+          other.snr == this.snr &&
+          other.role == this.role &&
+          other.model == this.model);
 }
 
 class NodesCompanion extends UpdateCompanion<Node> {
   final Value<int> num;
   final Value<String?> shortName;
   final Value<String?> longName;
+  final Value<DateTime?> lastHeard;
+  final Value<int?> battery;
+  final Value<double?> snr;
+  final Value<String?> role;
+  final Value<String?> model;
   const NodesCompanion({
     this.num = const Value.absent(),
     this.shortName = const Value.absent(),
     this.longName = const Value.absent(),
+    this.lastHeard = const Value.absent(),
+    this.battery = const Value.absent(),
+    this.snr = const Value.absent(),
+    this.role = const Value.absent(),
+    this.model = const Value.absent(),
   });
   NodesCompanion.insert({
     this.num = const Value.absent(),
     this.shortName = const Value.absent(),
     this.longName = const Value.absent(),
+    this.lastHeard = const Value.absent(),
+    this.battery = const Value.absent(),
+    this.snr = const Value.absent(),
+    this.role = const Value.absent(),
+    this.model = const Value.absent(),
   });
   static Insertable<Node> custom({
     Expression<int>? num,
     Expression<String>? shortName,
     Expression<String>? longName,
+    Expression<DateTime>? lastHeard,
+    Expression<int>? battery,
+    Expression<double>? snr,
+    Expression<String>? role,
+    Expression<String>? model,
   }) {
     return RawValuesInsertable({
       if (num != null) 'num': num,
       if (shortName != null) 'short_name': shortName,
       if (longName != null) 'long_name': longName,
+      if (lastHeard != null) 'last_heard': lastHeard,
+      if (battery != null) 'battery': battery,
+      if (snr != null) 'snr': snr,
+      if (role != null) 'role': role,
+      if (model != null) 'model': model,
     });
   }
 
@@ -611,11 +828,21 @@ class NodesCompanion extends UpdateCompanion<Node> {
     Value<int>? num,
     Value<String?>? shortName,
     Value<String?>? longName,
+    Value<DateTime?>? lastHeard,
+    Value<int?>? battery,
+    Value<double?>? snr,
+    Value<String?>? role,
+    Value<String?>? model,
   }) {
     return NodesCompanion(
       num: num ?? this.num,
       shortName: shortName ?? this.shortName,
       longName: longName ?? this.longName,
+      lastHeard: lastHeard ?? this.lastHeard,
+      battery: battery ?? this.battery,
+      snr: snr ?? this.snr,
+      role: role ?? this.role,
+      model: model ?? this.model,
     );
   }
 
@@ -631,6 +858,21 @@ class NodesCompanion extends UpdateCompanion<Node> {
     if (longName.present) {
       map['long_name'] = Variable<String>(longName.value);
     }
+    if (lastHeard.present) {
+      map['last_heard'] = Variable<DateTime>(lastHeard.value);
+    }
+    if (battery.present) {
+      map['battery'] = Variable<int>(battery.value);
+    }
+    if (snr.present) {
+      map['snr'] = Variable<double>(snr.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (model.present) {
+      map['model'] = Variable<String>(model.value);
+    }
     return map;
   }
 
@@ -639,7 +881,12 @@ class NodesCompanion extends UpdateCompanion<Node> {
     return (StringBuffer('NodesCompanion(')
           ..write('num: $num, ')
           ..write('shortName: $shortName, ')
-          ..write('longName: $longName')
+          ..write('longName: $longName, ')
+          ..write('lastHeard: $lastHeard, ')
+          ..write('battery: $battery, ')
+          ..write('snr: $snr, ')
+          ..write('role: $role, ')
+          ..write('model: $model')
           ..write(')'))
         .toString();
   }
@@ -869,12 +1116,22 @@ typedef $$NodesTableCreateCompanionBuilder =
       Value<int> num,
       Value<String?> shortName,
       Value<String?> longName,
+      Value<DateTime?> lastHeard,
+      Value<int?> battery,
+      Value<double?> snr,
+      Value<String?> role,
+      Value<String?> model,
     });
 typedef $$NodesTableUpdateCompanionBuilder =
     NodesCompanion Function({
       Value<int> num,
       Value<String?> shortName,
       Value<String?> longName,
+      Value<DateTime?> lastHeard,
+      Value<int?> battery,
+      Value<double?> snr,
+      Value<String?> role,
+      Value<String?> model,
     });
 
 class $$NodesTableFilterComposer extends Composer<_$AppDatabase, $NodesTable> {
@@ -897,6 +1154,31 @@ class $$NodesTableFilterComposer extends Composer<_$AppDatabase, $NodesTable> {
 
   ColumnFilters<String> get longName => $composableBuilder(
     column: $table.longName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastHeard => $composableBuilder(
+    column: $table.lastHeard,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get battery => $composableBuilder(
+    column: $table.battery,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get snr => $composableBuilder(
+    column: $table.snr,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get model => $composableBuilder(
+    column: $table.model,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -924,6 +1206,31 @@ class $$NodesTableOrderingComposer
     column: $table.longName,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get lastHeard => $composableBuilder(
+    column: $table.lastHeard,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get battery => $composableBuilder(
+    column: $table.battery,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get snr => $composableBuilder(
+    column: $table.snr,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$NodesTableAnnotationComposer
@@ -943,6 +1250,21 @@ class $$NodesTableAnnotationComposer
 
   GeneratedColumn<String> get longName =>
       $composableBuilder(column: $table.longName, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastHeard =>
+      $composableBuilder(column: $table.lastHeard, builder: (column) => column);
+
+  GeneratedColumn<int> get battery =>
+      $composableBuilder(column: $table.battery, builder: (column) => column);
+
+  GeneratedColumn<double> get snr =>
+      $composableBuilder(column: $table.snr, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get model =>
+      $composableBuilder(column: $table.model, builder: (column) => column);
 }
 
 class $$NodesTableTableManager
@@ -976,20 +1298,40 @@ class $$NodesTableTableManager
                 Value<int> num = const Value.absent(),
                 Value<String?> shortName = const Value.absent(),
                 Value<String?> longName = const Value.absent(),
+                Value<DateTime?> lastHeard = const Value.absent(),
+                Value<int?> battery = const Value.absent(),
+                Value<double?> snr = const Value.absent(),
+                Value<String?> role = const Value.absent(),
+                Value<String?> model = const Value.absent(),
               }) => NodesCompanion(
                 num: num,
                 shortName: shortName,
                 longName: longName,
+                lastHeard: lastHeard,
+                battery: battery,
+                snr: snr,
+                role: role,
+                model: model,
               ),
           createCompanionCallback:
               ({
                 Value<int> num = const Value.absent(),
                 Value<String?> shortName = const Value.absent(),
                 Value<String?> longName = const Value.absent(),
+                Value<DateTime?> lastHeard = const Value.absent(),
+                Value<int?> battery = const Value.absent(),
+                Value<double?> snr = const Value.absent(),
+                Value<String?> role = const Value.absent(),
+                Value<String?> model = const Value.absent(),
               }) => NodesCompanion.insert(
                 num: num,
                 shortName: shortName,
                 longName: longName,
+                lastHeard: lastHeard,
+                battery: battery,
+                snr: snr,
+                role: role,
+                model: model,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

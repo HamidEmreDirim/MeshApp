@@ -10,6 +10,7 @@ import '../../features/map/presentation/map_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/auth_provider.dart';
+import '../../features/users/presentation/users_panel.dart';
 
 part 'app_router.g.dart';
 
@@ -18,6 +19,7 @@ GoRouter goRouter(Ref ref) {
   final rootNavigatorKey = GlobalKey<NavigatorState>();
   final chatNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'chat');
   final mapNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'map');
+  final usersNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'users');
   final settingsNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'settings');
   
   final authState = ref.watch(authProvider);
@@ -80,6 +82,15 @@ GoRouter goRouter(Ref ref) {
               GoRoute(
                 path: '/map',
                 builder: (context, state) => const MapScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: usersNavigatorKey,
+            routes: [
+              GoRoute(
+                path: '/users',
+                builder: (context, state) => const UsersPanel(),
               ),
             ],
           ),

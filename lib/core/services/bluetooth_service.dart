@@ -187,6 +187,11 @@ class BluetoothService {
              num: fromRadio.nodeInfo.num,
              shortName: fromRadio.nodeInfo.user.shortName,
              longName: fromRadio.nodeInfo.user.longName,
+             snr: fromRadio.nodeInfo.snr,
+             lastHeard: fromRadio.nodeInfo.hasLastHeard() ? DateTime.fromMillisecondsSinceEpoch(fromRadio.nodeInfo.lastHeard * 1000) : null,
+             battery: fromRadio.nodeInfo.deviceMetrics.hasBatteryLevel() ? fromRadio.nodeInfo.deviceMetrics.batteryLevel : null,
+             role: fromRadio.nodeInfo.user.hasRole() ? fromRadio.nodeInfo.user.role.name : null,
+             model: fromRadio.nodeInfo.user.hasHwModel() ? fromRadio.nodeInfo.user.hwModel.name : null,
            ));
         }
 

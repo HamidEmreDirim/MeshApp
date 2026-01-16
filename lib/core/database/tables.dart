@@ -13,6 +13,14 @@ class Nodes extends Table {
   IntColumn get num => integer()(); // Node ID
   TextColumn get shortName => text().nullable()();
   TextColumn get longName => text().nullable()();
+  
+  // New fields
+  DateTimeColumn get lastHeard => dateTime().nullable()();
+  IntColumn get battery => integer().nullable()();
+  RealColumn get snr => real().nullable()();
+  TextColumn get role => text().nullable()(); // Router, Client, etc.
+  TextColumn get model => text().nullable()(); // TBEAM, etc.
+  
   // We can add more fields from NodeInfo as needed, or store blob
   
   @override
