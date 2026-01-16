@@ -479,6 +479,39 @@ class $NodesTable extends Nodes with TableInfo<$NodesTable, Node> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _latitudeMeta = const VerificationMeta(
+    'latitude',
+  );
+  @override
+  late final GeneratedColumn<double> latitude = GeneratedColumn<double>(
+    'latitude',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _longitudeMeta = const VerificationMeta(
+    'longitude',
+  );
+  @override
+  late final GeneratedColumn<double> longitude = GeneratedColumn<double>(
+    'longitude',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _altitudeMeta = const VerificationMeta(
+    'altitude',
+  );
+  @override
+  late final GeneratedColumn<int> altitude = GeneratedColumn<int>(
+    'altitude',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     num,
@@ -489,6 +522,9 @@ class $NodesTable extends Nodes with TableInfo<$NodesTable, Node> {
     snr,
     role,
     model,
+    latitude,
+    longitude,
+    altitude,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -550,6 +586,24 @@ class $NodesTable extends Nodes with TableInfo<$NodesTable, Node> {
         model.isAcceptableOrUnknown(data['model']!, _modelMeta),
       );
     }
+    if (data.containsKey('latitude')) {
+      context.handle(
+        _latitudeMeta,
+        latitude.isAcceptableOrUnknown(data['latitude']!, _latitudeMeta),
+      );
+    }
+    if (data.containsKey('longitude')) {
+      context.handle(
+        _longitudeMeta,
+        longitude.isAcceptableOrUnknown(data['longitude']!, _longitudeMeta),
+      );
+    }
+    if (data.containsKey('altitude')) {
+      context.handle(
+        _altitudeMeta,
+        altitude.isAcceptableOrUnknown(data['altitude']!, _altitudeMeta),
+      );
+    }
     return context;
   }
 
@@ -591,6 +645,18 @@ class $NodesTable extends Nodes with TableInfo<$NodesTable, Node> {
         DriftSqlType.string,
         data['${effectivePrefix}model'],
       ),
+      latitude: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}latitude'],
+      ),
+      longitude: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}longitude'],
+      ),
+      altitude: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}altitude'],
+      ),
     );
   }
 
@@ -609,6 +675,9 @@ class Node extends DataClass implements Insertable<Node> {
   final double? snr;
   final String? role;
   final String? model;
+  final double? latitude;
+  final double? longitude;
+  final int? altitude;
   const Node({
     required this.num,
     this.shortName,
@@ -618,6 +687,9 @@ class Node extends DataClass implements Insertable<Node> {
     this.snr,
     this.role,
     this.model,
+    this.latitude,
+    this.longitude,
+    this.altitude,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -644,6 +716,15 @@ class Node extends DataClass implements Insertable<Node> {
     if (!nullToAbsent || model != null) {
       map['model'] = Variable<String>(model);
     }
+    if (!nullToAbsent || latitude != null) {
+      map['latitude'] = Variable<double>(latitude);
+    }
+    if (!nullToAbsent || longitude != null) {
+      map['longitude'] = Variable<double>(longitude);
+    }
+    if (!nullToAbsent || altitude != null) {
+      map['altitude'] = Variable<int>(altitude);
+    }
     return map;
   }
 
@@ -667,6 +748,15 @@ class Node extends DataClass implements Insertable<Node> {
       model: model == null && nullToAbsent
           ? const Value.absent()
           : Value(model),
+      latitude: latitude == null && nullToAbsent
+          ? const Value.absent()
+          : Value(latitude),
+      longitude: longitude == null && nullToAbsent
+          ? const Value.absent()
+          : Value(longitude),
+      altitude: altitude == null && nullToAbsent
+          ? const Value.absent()
+          : Value(altitude),
     );
   }
 
@@ -684,6 +774,9 @@ class Node extends DataClass implements Insertable<Node> {
       snr: serializer.fromJson<double?>(json['snr']),
       role: serializer.fromJson<String?>(json['role']),
       model: serializer.fromJson<String?>(json['model']),
+      latitude: serializer.fromJson<double?>(json['latitude']),
+      longitude: serializer.fromJson<double?>(json['longitude']),
+      altitude: serializer.fromJson<int?>(json['altitude']),
     );
   }
   @override
@@ -698,6 +791,9 @@ class Node extends DataClass implements Insertable<Node> {
       'snr': serializer.toJson<double?>(snr),
       'role': serializer.toJson<String?>(role),
       'model': serializer.toJson<String?>(model),
+      'latitude': serializer.toJson<double?>(latitude),
+      'longitude': serializer.toJson<double?>(longitude),
+      'altitude': serializer.toJson<int?>(altitude),
     };
   }
 
@@ -710,6 +806,9 @@ class Node extends DataClass implements Insertable<Node> {
     Value<double?> snr = const Value.absent(),
     Value<String?> role = const Value.absent(),
     Value<String?> model = const Value.absent(),
+    Value<double?> latitude = const Value.absent(),
+    Value<double?> longitude = const Value.absent(),
+    Value<int?> altitude = const Value.absent(),
   }) => Node(
     num: num ?? this.num,
     shortName: shortName.present ? shortName.value : this.shortName,
@@ -719,6 +818,9 @@ class Node extends DataClass implements Insertable<Node> {
     snr: snr.present ? snr.value : this.snr,
     role: role.present ? role.value : this.role,
     model: model.present ? model.value : this.model,
+    latitude: latitude.present ? latitude.value : this.latitude,
+    longitude: longitude.present ? longitude.value : this.longitude,
+    altitude: altitude.present ? altitude.value : this.altitude,
   );
   Node copyWithCompanion(NodesCompanion data) {
     return Node(
@@ -730,6 +832,9 @@ class Node extends DataClass implements Insertable<Node> {
       snr: data.snr.present ? data.snr.value : this.snr,
       role: data.role.present ? data.role.value : this.role,
       model: data.model.present ? data.model.value : this.model,
+      latitude: data.latitude.present ? data.latitude.value : this.latitude,
+      longitude: data.longitude.present ? data.longitude.value : this.longitude,
+      altitude: data.altitude.present ? data.altitude.value : this.altitude,
     );
   }
 
@@ -743,7 +848,10 @@ class Node extends DataClass implements Insertable<Node> {
           ..write('battery: $battery, ')
           ..write('snr: $snr, ')
           ..write('role: $role, ')
-          ..write('model: $model')
+          ..write('model: $model, ')
+          ..write('latitude: $latitude, ')
+          ..write('longitude: $longitude, ')
+          ..write('altitude: $altitude')
           ..write(')'))
         .toString();
   }
@@ -758,6 +866,9 @@ class Node extends DataClass implements Insertable<Node> {
     snr,
     role,
     model,
+    latitude,
+    longitude,
+    altitude,
   );
   @override
   bool operator ==(Object other) =>
@@ -770,7 +881,10 @@ class Node extends DataClass implements Insertable<Node> {
           other.battery == this.battery &&
           other.snr == this.snr &&
           other.role == this.role &&
-          other.model == this.model);
+          other.model == this.model &&
+          other.latitude == this.latitude &&
+          other.longitude == this.longitude &&
+          other.altitude == this.altitude);
 }
 
 class NodesCompanion extends UpdateCompanion<Node> {
@@ -782,6 +896,9 @@ class NodesCompanion extends UpdateCompanion<Node> {
   final Value<double?> snr;
   final Value<String?> role;
   final Value<String?> model;
+  final Value<double?> latitude;
+  final Value<double?> longitude;
+  final Value<int?> altitude;
   const NodesCompanion({
     this.num = const Value.absent(),
     this.shortName = const Value.absent(),
@@ -791,6 +908,9 @@ class NodesCompanion extends UpdateCompanion<Node> {
     this.snr = const Value.absent(),
     this.role = const Value.absent(),
     this.model = const Value.absent(),
+    this.latitude = const Value.absent(),
+    this.longitude = const Value.absent(),
+    this.altitude = const Value.absent(),
   });
   NodesCompanion.insert({
     this.num = const Value.absent(),
@@ -801,6 +921,9 @@ class NodesCompanion extends UpdateCompanion<Node> {
     this.snr = const Value.absent(),
     this.role = const Value.absent(),
     this.model = const Value.absent(),
+    this.latitude = const Value.absent(),
+    this.longitude = const Value.absent(),
+    this.altitude = const Value.absent(),
   });
   static Insertable<Node> custom({
     Expression<int>? num,
@@ -811,6 +934,9 @@ class NodesCompanion extends UpdateCompanion<Node> {
     Expression<double>? snr,
     Expression<String>? role,
     Expression<String>? model,
+    Expression<double>? latitude,
+    Expression<double>? longitude,
+    Expression<int>? altitude,
   }) {
     return RawValuesInsertable({
       if (num != null) 'num': num,
@@ -821,6 +947,9 @@ class NodesCompanion extends UpdateCompanion<Node> {
       if (snr != null) 'snr': snr,
       if (role != null) 'role': role,
       if (model != null) 'model': model,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+      if (altitude != null) 'altitude': altitude,
     });
   }
 
@@ -833,6 +962,9 @@ class NodesCompanion extends UpdateCompanion<Node> {
     Value<double?>? snr,
     Value<String?>? role,
     Value<String?>? model,
+    Value<double?>? latitude,
+    Value<double?>? longitude,
+    Value<int?>? altitude,
   }) {
     return NodesCompanion(
       num: num ?? this.num,
@@ -843,6 +975,9 @@ class NodesCompanion extends UpdateCompanion<Node> {
       snr: snr ?? this.snr,
       role: role ?? this.role,
       model: model ?? this.model,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      altitude: altitude ?? this.altitude,
     );
   }
 
@@ -873,6 +1008,15 @@ class NodesCompanion extends UpdateCompanion<Node> {
     if (model.present) {
       map['model'] = Variable<String>(model.value);
     }
+    if (latitude.present) {
+      map['latitude'] = Variable<double>(latitude.value);
+    }
+    if (longitude.present) {
+      map['longitude'] = Variable<double>(longitude.value);
+    }
+    if (altitude.present) {
+      map['altitude'] = Variable<int>(altitude.value);
+    }
     return map;
   }
 
@@ -886,7 +1030,10 @@ class NodesCompanion extends UpdateCompanion<Node> {
           ..write('battery: $battery, ')
           ..write('snr: $snr, ')
           ..write('role: $role, ')
-          ..write('model: $model')
+          ..write('model: $model, ')
+          ..write('latitude: $latitude, ')
+          ..write('longitude: $longitude, ')
+          ..write('altitude: $altitude')
           ..write(')'))
         .toString();
   }
@@ -1121,6 +1268,9 @@ typedef $$NodesTableCreateCompanionBuilder =
       Value<double?> snr,
       Value<String?> role,
       Value<String?> model,
+      Value<double?> latitude,
+      Value<double?> longitude,
+      Value<int?> altitude,
     });
 typedef $$NodesTableUpdateCompanionBuilder =
     NodesCompanion Function({
@@ -1132,6 +1282,9 @@ typedef $$NodesTableUpdateCompanionBuilder =
       Value<double?> snr,
       Value<String?> role,
       Value<String?> model,
+      Value<double?> latitude,
+      Value<double?> longitude,
+      Value<int?> altitude,
     });
 
 class $$NodesTableFilterComposer extends Composer<_$AppDatabase, $NodesTable> {
@@ -1179,6 +1332,21 @@ class $$NodesTableFilterComposer extends Composer<_$AppDatabase, $NodesTable> {
 
   ColumnFilters<String> get model => $composableBuilder(
     column: $table.model,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get latitude => $composableBuilder(
+    column: $table.latitude,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get longitude => $composableBuilder(
+    column: $table.longitude,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get altitude => $composableBuilder(
+    column: $table.altitude,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1231,6 +1399,21 @@ class $$NodesTableOrderingComposer
     column: $table.model,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<double> get latitude => $composableBuilder(
+    column: $table.latitude,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get longitude => $composableBuilder(
+    column: $table.longitude,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get altitude => $composableBuilder(
+    column: $table.altitude,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$NodesTableAnnotationComposer
@@ -1265,6 +1448,15 @@ class $$NodesTableAnnotationComposer
 
   GeneratedColumn<String> get model =>
       $composableBuilder(column: $table.model, builder: (column) => column);
+
+  GeneratedColumn<double> get latitude =>
+      $composableBuilder(column: $table.latitude, builder: (column) => column);
+
+  GeneratedColumn<double> get longitude =>
+      $composableBuilder(column: $table.longitude, builder: (column) => column);
+
+  GeneratedColumn<int> get altitude =>
+      $composableBuilder(column: $table.altitude, builder: (column) => column);
 }
 
 class $$NodesTableTableManager
@@ -1303,6 +1495,9 @@ class $$NodesTableTableManager
                 Value<double?> snr = const Value.absent(),
                 Value<String?> role = const Value.absent(),
                 Value<String?> model = const Value.absent(),
+                Value<double?> latitude = const Value.absent(),
+                Value<double?> longitude = const Value.absent(),
+                Value<int?> altitude = const Value.absent(),
               }) => NodesCompanion(
                 num: num,
                 shortName: shortName,
@@ -1312,6 +1507,9 @@ class $$NodesTableTableManager
                 snr: snr,
                 role: role,
                 model: model,
+                latitude: latitude,
+                longitude: longitude,
+                altitude: altitude,
               ),
           createCompanionCallback:
               ({
@@ -1323,6 +1521,9 @@ class $$NodesTableTableManager
                 Value<double?> snr = const Value.absent(),
                 Value<String?> role = const Value.absent(),
                 Value<String?> model = const Value.absent(),
+                Value<double?> latitude = const Value.absent(),
+                Value<double?> longitude = const Value.absent(),
+                Value<int?> altitude = const Value.absent(),
               }) => NodesCompanion.insert(
                 num: num,
                 shortName: shortName,
@@ -1332,6 +1533,9 @@ class $$NodesTableTableManager
                 snr: snr,
                 role: role,
                 model: model,
+                latitude: latitude,
+                longitude: longitude,
+                altitude: altitude,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

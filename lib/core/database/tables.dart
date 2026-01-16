@@ -21,6 +21,11 @@ class Nodes extends Table {
   TextColumn get role => text().nullable()(); // Router, Client, etc.
   TextColumn get model => text().nullable()(); // TBEAM, etc.
   
+  // Location
+  RealColumn get latitude => real().nullable()();
+  RealColumn get longitude => real().nullable()();
+  IntColumn get altitude => integer().nullable()();
+  
   // We can add more fields from NodeInfo as needed, or store blob
   
   @override

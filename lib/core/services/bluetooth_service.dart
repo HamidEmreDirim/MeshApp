@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -127,21 +128,21 @@ class BluetoothService {
   }
 
   Future<void> _initializeConnection() async {
-    print("Initializing connection: subscribing to FromNum");
+    log("Initializing connection: subscribing to FromNum");
     await _fromNumChar!.setNotifyValue(true);
     _fromNumChar!.onValueReceived.listen((value) async {
-       print("FromNum notification received: $value");
+       log("FromNum notification received: $value");
        await _readFromRadio();
     });
 
-    print("Sending want_config_id to ToRadio");
+    log("Sending want_config_id to ToRadio");
     final packet = ToRadio();
     packet.wantConfigId = 12345;
     await _toRadioChar!.write(packet.writeToBuffer());
-    print("Sent want_config_id");
+    log("Sent want_config_id");
     
     // Kickstart read just in case
-    print("Doing initial read kick...");
+    log("Doing initial read kick...");
     await _readFromRadio();
   }
 
@@ -151,15 +152,15 @@ class BluetoothService {
     // Read loop
     while (true) {
       try {
-        print("Reading FromRadio...");
+        log("Reading FromRadio...");
         List<int> value = await _fromRadioChar!.read();
         if (value.isEmpty) {
-          print("FromRadio empty, stopping read loop");
+          log("FromRadio empty, stopping read loop");
           break;
         }
 
         final fromRadio = FromRadio.fromBuffer(value);
-        print("Received FromRadio packet. Has packet: ${fromRadio.hasPacket()}");
+        log("Received FromRadio packet. Has packet: ${fromRadio.hasPacket()}");
         
         if (fromRadio.hasPacket()) {
           final packet = fromRadio.packet;
@@ -174,11 +175,22 @@ class BluetoothService {
                 isMe: Value(false),
                 timestamp: Value(DateTime.now()),
               ));
+          } else if (packet.decoded.portnum == PortNum.POSITION_APP) {
+             try {
+                final position = Position.fromBuffer(packet.decoded.payload);
+                final lat = position.latitudeI * 1e-7;
+                final lon = position.longitudeI * 1e-7;
+                
+                log("Received position from ${packet.from}: $lat, $lon");
+                _db.upsertNodeLocation(packet.from, lat, lon, position.altitude);
+             } catch (e) {
+                log("Error parsing Position: $e");
+             }
           }
         }
 
         if (fromRadio.hasNodeInfo()) {
-           print("Received NodeInfo for: ${fromRadio.nodeInfo.user.longName} (${fromRadio.nodeInfo.num})");
+           log("Received NodeInfo for: ${fromRadio.nodeInfo.user.longName} (${fromRadio.nodeInfo.num})");
            _knownNodes[fromRadio.nodeInfo.num] = fromRadio.nodeInfo;
            _nodesController.add(Map.from(_knownNodes));
            
@@ -193,20 +205,32 @@ class BluetoothService {
              role: fromRadio.nodeInfo.user.hasRole() ? fromRadio.nodeInfo.user.role.name : null,
              model: fromRadio.nodeInfo.user.hasHwModel() ? fromRadio.nodeInfo.user.hwModel.name : null,
            ));
+
+           // Persist Location from NodeInfo if available
+           if (fromRadio.nodeInfo.hasPosition()) {
+             final pos = fromRadio.nodeInfo.position;
+             final lat = pos.latitudeI * 1e-7;
+             final lon = pos.longitudeI * 1e-7;
+             // Only update if valid coordinates
+             if (lat != 0 && lon != 0) {
+                log("Received position for ${fromRadio.nodeInfo.num} via NodeInfo: $lat, $lon");
+               _db.upsertNodeLocation(fromRadio.nodeInfo.num, lat, lon, pos.altitude);
+             }
+           }
         }
 
         if (fromRadio.hasMyInfo()) {
-           print("Received MyNodeInfo: ${fromRadio.myInfo.myNodeNum}");
+           log("Received MyNodeInfo: ${fromRadio.myInfo.myNodeNum}");
            _currentMyNodeInfo = fromRadio.myInfo;
            _myNodeInfoController.add(_currentMyNodeInfo);
         }
         
         if (fromRadio.configCompleteId == 12345) {
-           print("Config sync complete");
+           log("Config sync complete");
            // _connectionStateController.add(BluetoothConnectionState.connected); // Signal ready?
         }
       } catch (e) {
-        print("Error reading/decoding packet: $e");
+        log("Error reading/decoding packet: $e");
         break; 
       }
     }
@@ -214,11 +238,11 @@ class BluetoothService {
 
   Future<void> sendMessage(String text) async {
     if (_toRadioChar == null) {
-      print("Cannot send: ToRadio char is null");
+      log("Cannot send: ToRadio char is null");
       return;
     }
 
-    print("Sending message: $text");
+    log("Sending message: $text");
     final meshPacket = MeshPacket();
     meshPacket.decoded = Data();
     meshPacket.decoded.portnum = PortNum.TEXT_MESSAGE_APP;
@@ -230,7 +254,7 @@ class BluetoothService {
     toRadio.packet = meshPacket;
 
     await _toRadioChar!.write(toRadio.writeToBuffer());
-    print("Message sent to BLE characteristic");
+    log("Message sent to BLE characteristic");
     
     // Persist Sent Message
     _db.insertMessage(MessagesCompanion.insert(
@@ -245,11 +269,11 @@ class BluetoothService {
   /// Sends a message to a specific node. defaults to broadcast if nodeId is null.
   Future<void> sendMessageTo(String text, int toNodeId) async {
       if (_toRadioChar == null) {
-      print("Cannot send: ToRadio char is null");
+      log("Cannot send: ToRadio char is null");
       return;
     }
 
-    print("Sending message to $toNodeId: $text");
+    log("Sending message to $toNodeId: $text");
     final meshPacket = MeshPacket();
     meshPacket.decoded = Data();
     meshPacket.decoded.portnum = PortNum.TEXT_MESSAGE_APP;
@@ -265,7 +289,7 @@ class BluetoothService {
     toRadio.packet = meshPacket;
 
     await _toRadioChar!.write(toRadio.writeToBuffer());
-    print("Private Message sent to $toNodeId");
+    log("Private Message sent to $toNodeId");
     
     // Persist Sent Message
     _db.insertMessage(MessagesCompanion.insert(

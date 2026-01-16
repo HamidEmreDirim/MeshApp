@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:geolocator/geolocator.dart'; // Added dependency
 
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/services/bluetooth_service.dart';
@@ -14,10 +15,26 @@ class ScanDialog extends ConsumerStatefulWidget {
 
 class _ScanDialogState extends ConsumerState<ScanDialog> {
   bool _isConnecting = false;
+  bool _locationServiceEnabled = true;
 
   @override
   void initState() {
     super.initState();
+    _checkLocationAndScan();
+  }
+
+  Future<void> _checkLocationAndScan() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted) {
+        setState(() {
+          _locationServiceEnabled = false;
+        });
+      }
+      return; 
+    }
+
+    // Services enabled, request permissions and scan
     _startScan();
   }
 
@@ -54,7 +71,30 @@ class _ScanDialogState extends ConsumerState<ScanDialog> {
       content: SizedBox(
         width: double.maxFinite,
         height: 300,
-        child: _isConnecting 
+        child: !_locationServiceEnabled
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.location_off, size: 48, color: Colors.orange),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "Location Services are disabled.\nAndroid requires Location to scan for Bluetooth devices.",
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () async {
+                        await Geolocator.openLocationSettings();
+                        // Wait user to come back? or manual retry
+                        _checkLocationAndScan();
+                      },
+                      child: const Text("Enable Location"),
+                    ),
+                  ],
+                ),
+              )
+            : _isConnecting 
           ? const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

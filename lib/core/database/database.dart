@@ -16,7 +16,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -32,6 +32,12 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(nodes, nodes.snr);
           await m.addColumn(nodes, nodes.role);
           await m.addColumn(nodes, nodes.model);
+        }
+        if (from < 3) {
+          // Schema v3: Added location
+          await m.addColumn(nodes, nodes.latitude);
+          await m.addColumn(nodes, nodes.longitude);
+          await m.addColumn(nodes, nodes.altitude);
         }
       },
     );
@@ -61,7 +67,23 @@ class AppDatabase extends _$AppDatabase {
 
   // Node CRUD
   Future<void> insertOrUpdateNode(Node node) => into(nodes).insertOnConflictUpdate(node);
+  
+  Future<void> upsertNodeLocation(int nodeId, double? lat, double? lon, int? alt) {
+    return into(nodes).insertOnConflictUpdate(
+      NodesCompanion(
+        num: Value(nodeId),
+        latitude: Value(lat),
+        longitude: Value(lon),
+        altitude: Value(alt),
+      ),
+    );
+  }
+
   Stream<List<Node>> watchAllNodes() => select(nodes).watch();
+
+  Stream<Node?> watchNode(int nodeId) {
+    return (select(nodes)..where((t) => t.num.equals(nodeId))).watchSingleOrNull();
+  }
 }
 
 LazyDatabase _openConnection() {
