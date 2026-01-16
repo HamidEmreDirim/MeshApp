@@ -35,7 +35,9 @@ final myNodeInfoProvider = StreamProvider<MyNodeInfo?>((ref) {
 class BluetoothService {
   final AppDatabase _db;
   
-  BluetoothService(this._db);
+  BluetoothService(this._db) {
+    FlutterBluePlus.setLogLevel(LogLevel.error, color: false);
+  }
 
   static const String serviceUuid = "6ba1b218-15a8-461f-9fa8-5dcae273eafd";
   static const String toRadioUuid = "f75c76d2-129e-4dad-a1dd-7866124401e7";
@@ -128,21 +130,21 @@ class BluetoothService {
   }
 
   Future<void> _initializeConnection() async {
-    log("Initializing connection: subscribing to FromNum");
+    print("DEBUG: Initializing connection: subscribing to FromNum");
     await _fromNumChar!.setNotifyValue(true);
     _fromNumChar!.onValueReceived.listen((value) async {
-       log("FromNum notification received: $value");
+       print("DEBUG: FromNum notification received: $value");
        await _readFromRadio();
     });
 
-    log("Sending want_config_id to ToRadio");
+    print("DEBUG: Sending want_config_id to ToRadio");
     final packet = ToRadio();
     packet.wantConfigId = 12345;
     await _toRadioChar!.write(packet.writeToBuffer());
-    log("Sent want_config_id");
+    print("DEBUG: Sent want_config_id");
     
     // Kickstart read just in case
-    log("Doing initial read kick...");
+    print("DEBUG: Doing initial read kick...");
     await _readFromRadio();
   }
 
@@ -152,15 +154,24 @@ class BluetoothService {
     // Read loop
     while (true) {
       try {
-        log("Reading FromRadio...");
+        print("DEBUG: Reading FromRadio...");
         List<int> value = await _fromRadioChar!.read();
         if (value.isEmpty) {
-          log("FromRadio empty, stopping read loop");
+          print("DEBUG: FromRadio empty, stopping read loop");
           break;
         }
+        
+        // Log raw received data
+        final hexData = value.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
+        print("DEBUG: Received Raw Data: $hexData");
+        
+        // Log ASCII representation
+        final asciiData = String.fromCharCodes(value.map((c) => c < 32 || c > 126 ? 46 : c));
+        print("DEBUG: ASCII: $asciiData");
 
         final fromRadio = FromRadio.fromBuffer(value);
-        log("Received FromRadio packet. Has packet: ${fromRadio.hasPacket()}");
+        print("DEBUG: Parsed FromRadio: $fromRadio");
+        print("DEBUG: Received FromRadio packet. Has packet: ${fromRadio.hasPacket()}");
         
         if (fromRadio.hasPacket()) {
           final packet = fromRadio.packet;
