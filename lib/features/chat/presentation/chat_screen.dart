@@ -5,8 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:gap/gap.dart';
 
 import '../../../core/services/bluetooth_service.dart';
-import '../../../gen/proto/meshtastic/mesh.pb.dart';
-import '../../../gen/proto/meshtastic/portnums.pbenum.dart';
+
 
 import '../../../core/database/database.dart'; // Add import if not present, checking imports separately
 
@@ -34,7 +33,7 @@ class ChatScreen extends HookConsumerWidget {
     final textController = useTextEditingController();
     
     // Auto-scroll to bottom
-    final scrollController = useScrollController();
+
     
     useEffect(() {
       if (messagesAsync.hasData && messagesAsync.data!.isNotEmpty) {

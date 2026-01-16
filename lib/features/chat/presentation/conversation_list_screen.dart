@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:gap/gap.dart';
+
 
 import '../../../core/services/bluetooth_service.dart';
-import '../../../gen/proto/meshtastic/mesh.pb.dart';
+
 
 class ConversationListScreen extends ConsumerWidget {
   const ConversationListScreen({super.key});

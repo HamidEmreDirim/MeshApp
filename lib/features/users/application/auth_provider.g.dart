@@ -48,7 +48,7 @@ final class UserServiceProvider
   }
 }
 
-String _$userServiceHash() => r'f0814d2a82a591631e339b131631760fbc4d8927';
+String _$userServiceHash() => r'827feb3ee0f09420805c910b5d643926493159a8';
 
 @ProviderFor(Auth)
 final authProvider = AuthProvider._();
@@ -81,7 +81,7 @@ final class AuthProvider extends $NotifierProvider<Auth, User?> {
   }
 }
 
-String _$authHash() => r'86c04cbd90525476b7cef905c49991b39b3249d0';
+String _$authHash() => r'738df738185071a899c981581b597125f1cc7e58';
 
 abstract class _$Auth extends $Notifier<User?> {
   User? build();
@@ -140,4 +140,4 @@ final class UsersListProvider
   }
 }
 
-String _$usersListHash() => r'992668843c99a96419367e28482cb42c92ff7d8e';
+String _$usersListHash() => r'fd1ef97aeca0e56ea1946441fce82d13b2a0f79c';

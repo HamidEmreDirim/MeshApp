@@ -11,7 +11,7 @@ import '../../gen/proto/meshtastic/mesh.pb.dart';
 import '../../gen/proto/meshtastic/portnums.pbenum.dart';
 
 import '../database/database.dart';
-import '../database/tables.dart';
+
 
 final bluetoothServiceProvider = Provider<BluetoothService>((ref) {
    final db = ref.watch(appDatabaseProvider);

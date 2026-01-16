@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/services/bluetooth_service.dart';
 
