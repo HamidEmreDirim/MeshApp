@@ -48,7 +48,7 @@ final class UserServiceProvider
   }
 }
 
-String _$userServiceHash() => r'827feb3ee0f09420805c910b5d643926493159a8';
+String _$userServiceHash() => r'db7b6b62ab179c0d9a73a4fcd54de191f4690550';
 
 @ProviderFor(Auth)
 final authProvider = AuthProvider._();
@@ -140,4 +140,4 @@ final class UsersListProvider
   }
 }
 
-String _$usersListHash() => r'fd1ef97aeca0e56ea1946441fce82d13b2a0f79c';
+String _$usersListHash() => r'b43e575db39695bd66bf501bbc21b7f917cef4e9';

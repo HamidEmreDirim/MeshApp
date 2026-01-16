@@ -8,6 +8,8 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/landing/presentation/landing_screen.dart' as io;
 import '../../features/map/presentation/map_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/auth_provider.dart';
 
 part 'app_router.g.dart';
 
@@ -17,11 +19,31 @@ GoRouter goRouter(Ref ref) {
   final chatNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'chat');
   final mapNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'map');
   final settingsNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'settings');
+  
+  final authState = ref.watch(authProvider);
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
-    initialLocation: '/landing', // Changed from /chat
+    initialLocation: '/landing',
+    redirect: (context, state) {
+      final isLoggedIn = authState.asData?.value != null;
+      final isLoggingIn = state.matchedLocation == '/login';
+
+      if (!isLoggedIn) {
+        return isLoggingIn ? null : '/login';
+      }
+
+      if (isLoggingIn) {
+        return '/landing';
+      }
+
+      return null;
+    },
     routes: [
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
       GoRoute(
         path: '/landing',
         builder: (context, state) => const io.LandingScreen(),
