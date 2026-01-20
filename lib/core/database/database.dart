@@ -79,6 +79,22 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  Future<void> deleteNode(int nodeId) {
+    return (delete(nodes)..where((t) => t.num.equals(nodeId))).go();
+  }
+  
+  Future<void> deleteMessagesForNode(int nodeId) {
+      if (nodeId == 4294967295) {
+        // Delete all broadcast messages? Maybe just clear them?
+        return (delete(messages)..where((t) => t.toId.equals(4294967295))).go();
+      } else {
+        // Delete conversation where either sender is me and receiver is them, OR sender is them and receiver is me.
+        // Actually for simplicity, we can just delete where fromId=nodeId OR toId=nodeId? 
+        // No, that works.
+        return (delete(messages)..where((t) => t.fromId.equals(nodeId) | t.toId.equals(nodeId))).go();
+      }
+  }
+
   Stream<List<Node>> watchAllNodes() => select(nodes).watch();
 
   Stream<Node?> watchNode(int nodeId) {

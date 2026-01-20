@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 
 import '../../../core/services/bluetooth_service.dart';
+import '../../../core/database/database.dart';
 
 
 class ConversationListScreen extends ConsumerWidget {
@@ -41,6 +42,26 @@ class ConversationListScreen extends ConsumerWidget {
                      'name': 'Primary Channel',
                    });
                 },
+                onLongPress: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text("Clear Primary Channel?"),
+                      content: const Text("This will delete all broadcast messages."),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+                        TextButton(
+                          onPressed: () {
+                             ref.read(appDatabaseProvider).deleteMessagesForNode(4294967295);
+                             Navigator.pop(context);
+                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Broadcasts cleared")));
+                          },
+                          child: const Text("Clear", style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
               const Divider(),
               if (nodes.isEmpty)
@@ -68,7 +89,28 @@ class ConversationListScreen extends ConsumerWidget {
                      context.push('/chat/detail', extra: {
                        'nodeId': node.num,
                        'name': name,
+                       'user_short_name': node.user.shortName, // pass for avatar if needed
                      });
+                   },
+                   onLongPress: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text("Delete chat with $name?"),
+                          content: const Text("This will permanently delete the conversation history."),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+                            TextButton(
+                              onPressed: () {
+                                 ref.read(appDatabaseProvider).deleteMessagesForNode(node.num);
+                                 Navigator.pop(context);
+                                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Conversation deleted")));
+                              },
+                              child: const Text("Delete", style: TextStyle(color: Colors.red)),
+                            ),
+                          ],
+                        ),
+                      );
                    },
                  );
               }),

@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../application/user_service.dart';
+import '../../../core/services/bluetooth_service.dart';
 import '../../../core/database/database.dart'; // Ensure correct import for Node
+import 'qr_code_screen.dart';
 
 class UsersPanel extends ConsumerWidget {
   const UsersPanel({super.key});
@@ -54,7 +56,7 @@ class UsersPanel extends ConsumerWidget {
     );
   }
 
-  void _showRemoveDialog(BuildContext context, Node user) {
+  void _showRemoveDialog(BuildContext context, WidgetRef ref, Node user) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -67,7 +69,13 @@ class UsersPanel extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () {
-              // TODO: Implement remove logic in DB/Service
+              // Remove from BluetoothService memory
+              ref.read(bluetoothServiceProvider).forgetNode(user.num);
+              // Remove from Database (Node + Messages)
+              final db = ref.read(appDatabaseProvider);
+              db.deleteNode(user.num);
+              db.deleteMessagesForNode(user.num);
+              
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('${user.shortName} removed')),
@@ -100,7 +108,10 @@ class UsersPanel extends ConsumerWidget {
               title: const Text('Scan QR Code'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Implement scan QR
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const QrCodeScreen(initialIndex: 0)),
+                );
               },
             ),
           ],
@@ -109,25 +120,10 @@ class UsersPanel extends ConsumerWidget {
     );
   }
   
-    void _showMyQrCode(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.qr_code, size: 200),
-            const SizedBox(height: 16),
-            const Text('My Node QR Code', style: TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
+  void _showMyQrCode(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const QrCodeScreen(initialIndex: 1)),
     );
   }
 
@@ -176,7 +172,7 @@ class UsersPanel extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   itemBuilder: (context, index) {
                     final user = users[index];
-                    return _buildNodeCard(context, user);
+                    return _buildNodeCard(context, ref, user);
                   },
                 ),
               ),
@@ -189,7 +185,7 @@ class UsersPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildNodeCard(BuildContext context, Node user) {
+  Widget _buildNodeCard(BuildContext context, WidgetRef ref, Node user) {
      final lastHeard = user.lastHeard;
      final timeAgo = lastHeard != null ? _formatTimeAgo(lastHeard) : 'Unknown';
      final isOnline = timeAgo == 'now' || timeAgo.contains('min') || timeAgo.contains('sec'); // Simple heuristic based on text
@@ -200,7 +196,7 @@ class UsersPanel extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         onTap: () => _showNodeDetails(context, user),
-        onLongPress: () => _showRemoveDialog(context, user),
+        onLongPress: () => _showRemoveDialog(context, ref, user),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(12.0),

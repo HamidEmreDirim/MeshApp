@@ -317,4 +317,11 @@ class BluetoothService {
       await _connectedDevice!.disconnect();
     }
   }
+
+  void forgetNode(int nodeId) {
+    if (_knownNodes.containsKey(nodeId)) {
+      _knownNodes.remove(nodeId);
+      _nodesController.add(Map.from(_knownNodes));
+    }
+  }
 }
