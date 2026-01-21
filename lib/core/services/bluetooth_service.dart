@@ -10,6 +10,8 @@ import 'package:drift/drift.dart';
 
 import '../../gen/proto/meshtastic/mesh.pb.dart';
 import '../../gen/proto/meshtastic/portnums.pbenum.dart';
+import '../../gen/proto/meshtastic/admin.pb.dart';
+import '../../gen/proto/meshtastic/channel.pb.dart';
 
 import '../database/database.dart';
 
@@ -64,6 +66,9 @@ class BluetoothService {
   final _myNodeInfoController = StreamController<MyNodeInfo?>.broadcast();
   MyNodeInfo? _currentMyNodeInfo;
   Stream<MyNodeInfo?> get myNodeInfo => _myNodeInfoController.stream;
+
+  final _adminMessagesController = StreamController<AdminMessage>.broadcast();
+  Stream<AdminMessage> get adminMessages => _adminMessagesController.stream;
   
   // Public accessor for current MyNodeInfo (useful for finding my ID)
   MyNodeInfo? get currentMyNodeInfo => _currentMyNodeInfo;
@@ -196,6 +201,14 @@ class BluetoothService {
                 _db.upsertNodeLocation(packet.from, lat, lon, position.altitude);
              } catch (e) {
                 log("Error parsing Position: $e");
+             }
+          } else if (packet.decoded.portnum == PortNum.ADMIN_APP) {
+             try {
+               final adminMsg = AdminMessage.fromBuffer(packet.decoded.payload);
+               log("Received AdminMessage: ${adminMsg.whichPayloadVariant()}");
+               _adminMessagesController.add(adminMsg);
+             } catch (e) {
+               log("Error parsing AdminMessage: $e");
              }
           }
         }
@@ -337,6 +350,75 @@ class BluetoothService {
 
     await _toRadioChar!.write(toRadio.writeToBuffer());
     log("Position sent to BLE characteristic");
+  }
+
+  Future<void> sendAdminMessage(AdminMessage message, {int? toNodeId}) async {
+    if (_toRadioChar == null) {
+      log("Cannot send AdminMessage: ToRadio char is null");
+      return;
+    }
+
+    final dest = toNodeId ?? myId;
+    log("Sending AdminMessage (${message.whichPayloadVariant()}) to $dest");
+
+    final meshPacket = MeshPacket();
+    meshPacket.decoded = Data();
+    meshPacket.decoded.portnum = PortNum.ADMIN_APP;
+    meshPacket.decoded.payload = message.writeToBuffer();
+    
+    // Target the specific node (us) or broadcast if we don't know who we are (unlikely)
+    // 0 is often interpreted as broadcast in some contexts, but let's try explicit ID.
+    if (dest != 0) {
+      meshPacket.to = dest;
+    }
+
+    // Admin messages should be reliable and we expect a response (like for getChannel)
+    meshPacket.decoded.wantResponse = true;
+    meshPacket.wantAck = true;
+
+    final toRadio = ToRadio();
+    toRadio.packet = meshPacket;
+
+    await _toRadioChar!.write(toRadio.writeToBuffer());
+    log("AdminMessage packet written to BLE");
+  }
+
+  Future<Channel?> getChannel(int index) async {
+    final completer = Completer<Channel?>();
+
+    log("Requesting Channel $index...");
+
+    // Subscribe to response one-off
+    final subscription = adminMessages.listen((msg) {
+      if (msg.hasGetChannelResponse() && msg.getChannelResponse.index == index) {
+         log("Received response for Channel $index");
+         if (!completer.isCompleted) {
+           completer.complete(msg.getChannelResponse);
+         }
+      }
+    });
+
+    try {
+      final req = AdminMessage();
+      req.getChannelRequest = index + 1; // 1-based request
+      
+      await sendAdminMessage(req);
+
+      return await completer.future.timeout(const Duration(seconds: 4));
+    } catch (e) {
+      log("Error/Timeout fetching channel $index: $e");
+      return null;
+    } finally {
+      await subscription.cancel();
+    }
+  }
+
+  Future<void> setChannel(Channel channel) async {
+    final req = AdminMessage();
+    req.setChannel = channel;
+    
+    await sendAdminMessage(req);
+    // Ideally wait for confirmation but for now just send
   }
 
   Future<void> disconnect() async {

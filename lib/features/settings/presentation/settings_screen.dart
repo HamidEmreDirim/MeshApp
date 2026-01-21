@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mesh_app/features/auth/presentation/auth_provider.dart';
 import '../../../core/services/bluetooth_service.dart';
+import 'channel_settings_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -81,6 +82,16 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
             ),
+          ListTile(
+            leading: const Icon(Icons.settings_input_antenna),
+            title: const Text('Channel Configuration'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ChannelSettingsScreen()),
+              );
+            },
+          ),
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Logout'),
