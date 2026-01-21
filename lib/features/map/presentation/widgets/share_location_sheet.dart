@@ -28,6 +28,11 @@ class _ShareLocationSheetState extends ConsumerState<ShareLocationSheet> {
   Widget build(BuildContext context) {
     final nodesAsync = ref.watch(nodesProvider);
     final theme = Theme.of(context);
+    
+    // Force usage of light-friendly text colors since the background is hardcoded white
+    final titleStyle = theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.black);
+    final bodyStyle = theme.textTheme.bodyMedium?.copyWith(color: Colors.black87);
+    final labelStyle = theme.textTheme.labelSmall?.copyWith(color: Colors.grey[700], fontWeight: FontWeight.bold);
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.8, // Taller sheet
@@ -50,7 +55,7 @@ class _ShareLocationSheetState extends ConsumerState<ShareLocationSheet> {
                 ),
                 Text(
                   "Share Location",
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  style: titleStyle,
                 ),
                 TextButton(
                   onPressed: _handleSend,
@@ -74,8 +79,9 @@ class _ShareLocationSheetState extends ConsumerState<ShareLocationSheet> {
                       Container(
                          padding: const EdgeInsets.all(12),
                          decoration: BoxDecoration(
-                           color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                           color: Colors.grey[100],
                            borderRadius: BorderRadius.circular(12),
+                           border: Border.all(color: Colors.grey[300]!)
                          ),
                          child: Row(
                            children: [
@@ -91,7 +97,7 @@ class _ShareLocationSheetState extends ConsumerState<ShareLocationSheet> {
                                    ),
                                    Text(
                                      "${widget.location.latitude.toStringAsFixed(5)}, ${widget.location.longitude.toStringAsFixed(5)}",
-                                     style: theme.textTheme.bodyMedium,
+                                     style: bodyStyle,
                                    ),
                                  ],
                                ),
@@ -102,14 +108,16 @@ class _ShareLocationSheetState extends ConsumerState<ShareLocationSheet> {
                       const Gap(16),
                       TextField(
                         controller: _noteController,
+                        style: const TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           hintText: "Add a note (e.g. Meet here)",
+                          hintStyle: TextStyle(color: Colors.grey[500]),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide.none,
                           ),
                           filled: true,
-                          fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          fillColor: Colors.grey[100],
                           contentPadding: const EdgeInsets.all(16),
                         ),
                         maxLines: 3,
@@ -126,7 +134,7 @@ class _ShareLocationSheetState extends ConsumerState<ShareLocationSheet> {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Text(
                     "CHANNELS",
-                    style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey, fontWeight: FontWeight.bold),
+                    style: labelStyle,
                   ),
                 ),
                 _buildRecipientItem(
@@ -140,7 +148,7 @@ class _ShareLocationSheetState extends ConsumerState<ShareLocationSheet> {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Text(
                     "USERS",
-                    style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey, fontWeight: FontWeight.bold),
+                    style: labelStyle,
                   ),
                 ),
                 
@@ -166,7 +174,7 @@ class _ShareLocationSheetState extends ConsumerState<ShareLocationSheet> {
                 else
                    Padding(
                      padding: const EdgeInsets.all(16),
-                     child: Text("No users found", style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey)),
+                     child: Text("No users found", style: bodyStyle?.copyWith(color: Colors.grey)),
                    ),
                    
                 const Gap(40), // Bottom padding
@@ -194,11 +202,11 @@ class _ShareLocationSheetState extends ConsumerState<ShareLocationSheet> {
         });
       },
       leading: CircleAvatar(
-        backgroundColor: isSelected ? theme.colorScheme.primaryContainer : theme.colorScheme.surfaceContainerHighest,
-        child: Icon(icon, color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant),
+        backgroundColor: isSelected ? theme.colorScheme.primaryContainer : Colors.grey[200],
+        child: Icon(icon, color: isSelected ? theme.colorScheme.primary : Colors.grey[700]),
       ),
-      title: Text(name, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-      subtitle: subtitle != null ? Text(subtitle) : null,
+      title: Text(name, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: Colors.black)),
+      subtitle: subtitle != null ? Text(subtitle, style: TextStyle(color: Colors.grey[600])) : null,
       trailing: isSelected 
           ? Icon(Icons.check_circle, color: theme.colorScheme.primary)
           : null,
