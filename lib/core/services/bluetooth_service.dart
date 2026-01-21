@@ -312,6 +312,33 @@ class BluetoothService {
     ));
   }
 
+  Future<void> sendPosition(double lat, double lon, int alt) async {
+    if (_toRadioChar == null) {
+      log("Cannot send position: ToRadio char is null");
+      return;
+    }
+
+    log("Sending position: $lat, $lon");
+
+    final position = Position();
+    position.latitudeI = (lat * 1e7).round();
+    position.longitudeI = (lon * 1e7).round();
+    position.altitude = alt;
+    // timestamp could be added if needed, but not strictly required by minimal spec.
+    
+    final meshPacket = MeshPacket();
+    meshPacket.decoded = Data();
+    meshPacket.decoded.portnum = PortNum.POSITION_APP;
+    meshPacket.decoded.payload = position.writeToBuffer();
+    // meshPacket.to = 4294967295; // Implicit Broadcast
+    
+    final toRadio = ToRadio();
+    toRadio.packet = meshPacket;
+
+    await _toRadioChar!.write(toRadio.writeToBuffer());
+    log("Position sent to BLE characteristic");
+  }
+
   Future<void> disconnect() async {
     if (_connectedDevice != null) {
       await _connectedDevice!.disconnect();

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class HomeScreen extends StatelessWidget {
+import '../../map/application/location_broadcast_manager.dart';
+
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({
     super.key,
     required this.navigationShell,
@@ -10,15 +13,39 @@ class HomeScreen extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
   @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Start broadcasting location periodic updates
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(locationBroadcastManagerProvider).start();
+    });
+  }
+
+  @override
+  void dispose() {
+    // Attempt to stop the broadcaster when the screen is disposed
+    // Note: In many apps HomeScreen is the root and only disposed on app exit
+    try {
+      ref.read(locationBroadcastManagerProvider).stop();
+    } catch (_) {}
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      body: widget.navigationShell,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
+        selectedIndex: widget.navigationShell.currentIndex,
         onDestinationSelected: (index) {
-          navigationShell.goBranch(
+          widget.navigationShell.goBranch(
             index,
-            initialLocation: index == navigationShell.currentIndex,
+            initialLocation: index == widget.navigationShell.currentIndex,
           );
         },
         destinations: const [
