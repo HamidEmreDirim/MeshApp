@@ -7,7 +7,8 @@ import 'package:gap/gap.dart';
 import '../../../core/services/bluetooth_service.dart';
 
 
-import '../../../core/database/database.dart'; // Add import if not present, checking imports separately
+import '../../../core/database/database.dart'; 
+import 'widgets/chat_bubble.dart';
 
 class ChatScreen extends HookConsumerWidget {
   final int targetNodeId;
@@ -92,57 +93,11 @@ class ChatScreen extends HookConsumerWidget {
                     
                     final content = msg.content;
                     
-                    return Align(
-                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        child: Column(
-                          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                          children: [
-                            if (!isMe && targetNodeId == 4294967295) ...[
-                              Padding(
-                                padding: const EdgeInsets.only(left: 12, bottom: 2),
-                                child: Text(
-                                  _getShortId(msg.fromId),
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Theme.of(context).colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: isMe 
-                                  ? Theme.of(context).colorScheme.primaryContainer 
-                                  : Theme.of(context).colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: const Radius.circular(16),
-                                  topRight: const Radius.circular(16),
-                                  bottomLeft: isMe ? const Radius.circular(16) : const Radius.circular(4),
-                                  bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(16),
-                                ),
-                              ),
-                              child: Text(
-                                content,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                   color: isMe 
-                                      ? Theme.of(context).colorScheme.onPrimaryContainer
-                                      : Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                            Padding(
-                               padding: const EdgeInsets.only(left: 4, right: 4, top: 2),
-                               child: Text(
-                                 "${msg.timestamp.hour.toString().padLeft(2,'0')}:${msg.timestamp.minute.toString().padLeft(2,'0')}",
-                                 style: Theme.of(context).textTheme.labelSmall,
-                               ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    return ChatBubble(
+                      content: content,
+                      isMe: isMe, 
+                      timestamp: msg.timestamp,
+                      senderName: _getShortId(msg.fromId),
                     );
                   },
                 );

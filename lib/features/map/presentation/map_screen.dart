@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/database/database.dart';
 import '../application/map_provider.dart';
+import 'widgets/share_location_sheet.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -24,6 +25,21 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final locationStateAsync = ref.watch(displayLocationProvider);
     final meshNodesAsync = ref.watch(meshNodesWithLocationProvider);
     final mapLayer = ref.watch(mapLayerProvider);
+    
+    // Watch for shared location requests from Chat
+    ref.listen(sharedLocationTargetProvider, (previous, next) {
+      if (next != null) {
+        _mapController.move(next, 16.0);
+        // We could also add a temporary marker here if we want, 
+        // but for now centering is the MVP step.
+        // To show a marker, we might want a local state variable "temporaryMarkerLocation"
+        // Let's add that logic below if desired, but centering is main requirement "open map and show the shared location".
+      }
+    });
+    
+    // We also read the provider directly to show the marker if it persists? 
+    // Usually we want to clear it after some time or just keep it until user moves.
+    final sharedLocation = ref.watch(sharedLocationTargetProvider);
 
     final userLocation = locationStateAsync.value?.location;
     final source = locationStateAsync.value?.source ?? LocationSource.none;
@@ -37,6 +53,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             options: MapOptions(
               initialCenter: userLocation ?? const LatLng(0, 0),
               initialZoom: 15.0,
+              onLongPress: (tapPosition, point) {
+                _showShareLocationSheet(context, point);
+              },
             ),
             children: [
               _buildTileLayer(mapLayer),
@@ -65,6 +84,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       child: _buildNodeMarker(node),
                     );
                   }).toList(),
+                ),
+                
+              // Shared Location Marker (Transient)
+              if (sharedLocation != null)
+                 MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: sharedLocation,
+                      width: 60,
+                      height: 60,
+                      child: const Icon(Icons.location_on, color: Colors.purple, size: 50),
+                    ),
+                  ],
                 ),
             ],
           ),
@@ -124,6 +156,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  void _showShareLocationSheet(BuildContext context, LatLng point) {
+    showModalBottomSheet(
+      context: context, 
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: ShareLocationSheet(location: point),
       ),
     );
   }

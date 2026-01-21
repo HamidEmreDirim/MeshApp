@@ -139,6 +139,7 @@ enum MapLayerType {
   terrain
 }
 
+
 class MapLayerNotifier extends Notifier<MapLayerType> {
   @override
   MapLayerType build() {
@@ -149,3 +150,15 @@ class MapLayerNotifier extends Notifier<MapLayerType> {
 }
 
 final mapLayerProvider = NotifierProvider<MapLayerNotifier, MapLayerType>(MapLayerNotifier.new);
+
+// Shared Location Target (for viewing shared location from Chat)
+class SharedLocationTargetNotifier extends Notifier<LatLng?> {
+  @override
+  LatLng? build() => null;
+
+  void setLocation(LatLng location) => state = location;
+  void clear() => state = null;
+}
+
+final sharedLocationTargetProvider = NotifierProvider<SharedLocationTargetNotifier, LatLng?>(SharedLocationTargetNotifier.new);
+
