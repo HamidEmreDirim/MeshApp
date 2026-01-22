@@ -34,14 +34,12 @@ class _ChannelSettingsScreenState extends ConsumerState<ChannelSettingsScreen> w
     try {
       final service = ref.read(bluetoothServiceProvider);
       
-      // Execute requests in parallel to speed up loading
-      // Note: If the device is slow, this might flood it. 
-      // If reliability issues occur, consider batching or sequential with short delays.
-      final futures = List<Future<Channel?>>.generate(8, (i) => service.getChannel(i));
-      final results = await Future.wait(futures);
-
+      // Execute requests sequentially with a delay to prevent flooding the device
       for (int i = 0; i < 8; i++) {
-        final channel = results[i];
+        // Add a small delay between requests to allow device to process
+        if (i > 0) await Future.delayed(const Duration(milliseconds: 300));
+        
+        final channel = await service.getChannel(i);
         if (channel != null) {
             _channels[i] = channel;
         } else {
@@ -52,6 +50,8 @@ class _ChannelSettingsScreenState extends ConsumerState<ChannelSettingsScreen> w
               settings: ChannelSettings(name: ""),
             );
         }
+        // Update UI progressively
+        if (mounted) setState(() {});
       }
     } catch (e) {
       debugPrint("Error loading channels: $e");
@@ -96,13 +96,16 @@ class _ChannelSettingsScreenState extends ConsumerState<ChannelSettingsScreen> w
           controller: _tabController,
           isScrollable: true,
           tabs: [
-            const Tab(text: "Primary"),
-            for (int i = 1; i < 8; i++)
-               Tab(text: "Ch $i"),
+            for (int i = 0; i < 8; i++)
+               Tab(
+                 text: _channels[i]?.settings.name.isNotEmpty == true 
+                     ? "${i == 0 ? 'P' : i}: ${_channels[i]!.settings.name}" 
+                     : (i == 0 ? "Primary" : "Ch $i"),
+               ),
           ],
         ),
       ),
-      body: _isLoading 
+      body: _isLoading && _channels.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : TabBarView(
               controller: _tabController,
@@ -114,7 +117,7 @@ class _ChannelSettingsScreenState extends ConsumerState<ChannelSettingsScreen> w
                            channel: _channels[i]!, 
                            onSave: _onSaveChannel
                          )
-                       : const Center(child: Text("Failed to load channel")),
+                       : const Center(child: CircularProgressIndicator()),
               ],
             ),
     );
