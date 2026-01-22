@@ -65,7 +65,43 @@ class ChatScreen extends HookConsumerWidget {
                bluetooth.disconnect();
             },
             tooltip: "Disconnect",
-          )
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              if (value == 'delete') {
+                final confirmed = await showDialog<bool>(
+                  context: context, 
+                  builder: (context) => AlertDialog(
+                    title: const Text("Delete History?"),
+                    content: const Text("This will permanently delete all messages in this conversation."),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+                      TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Delete", style: TextStyle(color: Colors.red))),
+                    ],
+                  ),
+                );
+                
+                if (confirmed == true) {
+                   await db.deleteMessagesForNode(targetNodeId, channelIndex: channelIndex);
+                   if (context.mounted) {
+                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("History cleared")));
+                   }
+                }
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text("Clear History", style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: Column(

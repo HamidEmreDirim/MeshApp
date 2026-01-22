@@ -69,6 +69,7 @@ GoRouter goRouter(Ref ref) {
                       return ChatScreen(
                         targetNodeId: extra['nodeId'] as int,
                         targetName: extra['name'] as String,
+                        channelIndex: extra['channelIndex'] as int? ?? 0,
                       );
                     },
                   ),
