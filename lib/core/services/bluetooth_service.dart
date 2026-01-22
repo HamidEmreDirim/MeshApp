@@ -11,7 +11,7 @@ import 'package:drift/drift.dart';
 import '../../gen/proto/meshtastic/mesh.pb.dart';
 import '../../gen/proto/meshtastic/portnums.pbenum.dart';
 import '../../gen/proto/meshtastic/admin.pb.dart';
-import '../../gen/proto/meshtastic/channel.pb.dart';
+import '../../gen/proto/meshtastic/channel.pb.dart' as pb;
 
 import '../database/database.dart';
 
@@ -32,6 +32,10 @@ final nodesProvider = StreamProvider<Map<int, NodeInfo>>((ref) {
 
 final myNodeInfoProvider = StreamProvider<MyNodeInfo?>((ref) {
   return ref.watch(bluetoothServiceProvider).myNodeInfo;
+});
+
+final channelsProvider = StreamProvider<List<Channel>>((ref) {
+  return ref.watch(appDatabaseProvider).watchAllChannels();
 });
 
 class BluetoothService {
@@ -151,6 +155,9 @@ class BluetoothService {
     // Kickstart read just in case
     print("DEBUG: Doing initial read kick...");
     await _readFromRadio();
+    
+    // Fetch channels in background
+    fetchConfiguredChannels();
   }
 
   Future<void> _readFromRadio() async {
@@ -190,6 +197,7 @@ class BluetoothService {
                 content: text,
                 isMe: Value(false),
                 timestamp: Value(DateTime.now()),
+                channelIndex: Value(packet.channel), // Save the channel index
               ));
           } else if (packet.decoded.portnum == PortNum.POSITION_APP) {
              try {
@@ -260,7 +268,7 @@ class BluetoothService {
     }
   }
 
-  Future<void> sendMessage(String text) async {
+  Future<void> sendMessage(String text, {int channelIndex = 0}) async {
     if (_toRadioChar == null) {
       log("Cannot send: ToRadio char is null");
       return;
@@ -271,6 +279,7 @@ class BluetoothService {
     meshPacket.decoded = Data();
     meshPacket.decoded.portnum = PortNum.TEXT_MESSAGE_APP;
     meshPacket.decoded.payload = utf8.encode(text);
+    meshPacket.channel = channelIndex; // Set the channel
     // meshPacket.to = 4294967295; // Broadcast
     // meshPacket.wantAck = true;  
 
@@ -291,7 +300,7 @@ class BluetoothService {
   }
 
   /// Sends a message to a specific node. defaults to broadcast if nodeId is null.
-  Future<void> sendMessageTo(String text, int toNodeId) async {
+  Future<void> sendMessageTo(String text, int toNodeId, {int channelIndex = 0}) async {
       if (_toRadioChar == null) {
       log("Cannot send: ToRadio char is null");
       return;
@@ -303,6 +312,7 @@ class BluetoothService {
     meshPacket.decoded.portnum = PortNum.TEXT_MESSAGE_APP;
     meshPacket.decoded.payload = utf8.encode(text);
     meshPacket.to = toNodeId;
+    meshPacket.channel = channelIndex;
     
     // Set wantAck for private messages usually
     if (toNodeId != 4294967295) {
@@ -322,6 +332,7 @@ class BluetoothService {
       content: text,
       isMe: Value(true),
       timestamp: Value(DateTime.now()),
+      channelIndex: Value(channelIndex),
     ));
   }
 
@@ -383,8 +394,8 @@ class BluetoothService {
     log("AdminMessage packet written to BLE");
   }
 
-  Future<Channel?> getChannel(int index) async {
-    final completer = Completer<Channel?>();
+  Future<pb.Channel?> getChannel(int index) async {
+    final completer = Completer<pb.Channel?>();
 
     log("Requesting Channel $index...");
 
@@ -413,7 +424,27 @@ class BluetoothService {
     }
   }
 
-  Future<void> setChannel(Channel channel) async {
+  Future<void> fetchConfiguredChannels() async {
+    log("Fetching configured channels...");
+    for (int i = 0; i < 8; i++) { // Meshtastic usually has up to 8 channels
+      final channel = await getChannel(i);
+      log("Channel $i fetch result: ${channel?.settings.name}");
+      if (channel != null && channel.role != pb.Channel_Role.DISABLED) {
+         // Convert Protobuf Channel to Drift Channel
+         final driftChannel = Channel(
+            index: channel.index,
+            name: channel.settings.name,
+            role: channel.role.toString(),
+            psk: Uint8List.fromList(channel.settings.psk),
+         );
+         await _db.insertOrUpdateChannel(driftChannel);
+         log("Channel $i saved to DB");
+      }
+    }
+    log("Channel fetch complete");
+  }
+
+  Future<void> setChannel(pb.Channel channel) async {
     final req = AdminMessage();
     req.setChannel = channel;
     

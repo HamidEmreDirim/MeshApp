@@ -75,6 +75,18 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _channelIndexMeta = const VerificationMeta(
+    'channelIndex',
+  );
+  @override
+  late final GeneratedColumn<int> channelIndex = GeneratedColumn<int>(
+    'channel_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -83,6 +95,7 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     content,
     timestamp,
     isMe,
+    channelIndex,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -135,6 +148,15 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
         isMe.isAcceptableOrUnknown(data['is_me']!, _isMeMeta),
       );
     }
+    if (data.containsKey('channel_index')) {
+      context.handle(
+        _channelIndexMeta,
+        channelIndex.isAcceptableOrUnknown(
+          data['channel_index']!,
+          _channelIndexMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -168,6 +190,10 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_me'],
       )!,
+      channelIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}channel_index'],
+      )!,
     );
   }
 
@@ -184,6 +210,7 @@ class Message extends DataClass implements Insertable<Message> {
   final String content;
   final DateTime timestamp;
   final bool isMe;
+  final int channelIndex;
   const Message({
     required this.id,
     required this.fromId,
@@ -191,6 +218,7 @@ class Message extends DataClass implements Insertable<Message> {
     required this.content,
     required this.timestamp,
     required this.isMe,
+    required this.channelIndex,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -201,6 +229,7 @@ class Message extends DataClass implements Insertable<Message> {
     map['content'] = Variable<String>(content);
     map['timestamp'] = Variable<DateTime>(timestamp);
     map['is_me'] = Variable<bool>(isMe);
+    map['channel_index'] = Variable<int>(channelIndex);
     return map;
   }
 
@@ -212,6 +241,7 @@ class Message extends DataClass implements Insertable<Message> {
       content: Value(content),
       timestamp: Value(timestamp),
       isMe: Value(isMe),
+      channelIndex: Value(channelIndex),
     );
   }
 
@@ -227,6 +257,7 @@ class Message extends DataClass implements Insertable<Message> {
       content: serializer.fromJson<String>(json['content']),
       timestamp: serializer.fromJson<DateTime>(json['timestamp']),
       isMe: serializer.fromJson<bool>(json['isMe']),
+      channelIndex: serializer.fromJson<int>(json['channelIndex']),
     );
   }
   @override
@@ -239,6 +270,7 @@ class Message extends DataClass implements Insertable<Message> {
       'content': serializer.toJson<String>(content),
       'timestamp': serializer.toJson<DateTime>(timestamp),
       'isMe': serializer.toJson<bool>(isMe),
+      'channelIndex': serializer.toJson<int>(channelIndex),
     };
   }
 
@@ -249,6 +281,7 @@ class Message extends DataClass implements Insertable<Message> {
     String? content,
     DateTime? timestamp,
     bool? isMe,
+    int? channelIndex,
   }) => Message(
     id: id ?? this.id,
     fromId: fromId ?? this.fromId,
@@ -256,6 +289,7 @@ class Message extends DataClass implements Insertable<Message> {
     content: content ?? this.content,
     timestamp: timestamp ?? this.timestamp,
     isMe: isMe ?? this.isMe,
+    channelIndex: channelIndex ?? this.channelIndex,
   );
   Message copyWithCompanion(MessagesCompanion data) {
     return Message(
@@ -265,6 +299,9 @@ class Message extends DataClass implements Insertable<Message> {
       content: data.content.present ? data.content.value : this.content,
       timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
       isMe: data.isMe.present ? data.isMe.value : this.isMe,
+      channelIndex: data.channelIndex.present
+          ? data.channelIndex.value
+          : this.channelIndex,
     );
   }
 
@@ -276,13 +313,15 @@ class Message extends DataClass implements Insertable<Message> {
           ..write('toId: $toId, ')
           ..write('content: $content, ')
           ..write('timestamp: $timestamp, ')
-          ..write('isMe: $isMe')
+          ..write('isMe: $isMe, ')
+          ..write('channelIndex: $channelIndex')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, fromId, toId, content, timestamp, isMe);
+  int get hashCode =>
+      Object.hash(id, fromId, toId, content, timestamp, isMe, channelIndex);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -292,7 +331,8 @@ class Message extends DataClass implements Insertable<Message> {
           other.toId == this.toId &&
           other.content == this.content &&
           other.timestamp == this.timestamp &&
-          other.isMe == this.isMe);
+          other.isMe == this.isMe &&
+          other.channelIndex == this.channelIndex);
 }
 
 class MessagesCompanion extends UpdateCompanion<Message> {
@@ -302,6 +342,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
   final Value<String> content;
   final Value<DateTime> timestamp;
   final Value<bool> isMe;
+  final Value<int> channelIndex;
   const MessagesCompanion({
     this.id = const Value.absent(),
     this.fromId = const Value.absent(),
@@ -309,6 +350,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     this.content = const Value.absent(),
     this.timestamp = const Value.absent(),
     this.isMe = const Value.absent(),
+    this.channelIndex = const Value.absent(),
   });
   MessagesCompanion.insert({
     this.id = const Value.absent(),
@@ -317,6 +359,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     required String content,
     this.timestamp = const Value.absent(),
     this.isMe = const Value.absent(),
+    this.channelIndex = const Value.absent(),
   }) : fromId = Value(fromId),
        toId = Value(toId),
        content = Value(content);
@@ -327,6 +370,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     Expression<String>? content,
     Expression<DateTime>? timestamp,
     Expression<bool>? isMe,
+    Expression<int>? channelIndex,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -335,6 +379,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
       if (content != null) 'content': content,
       if (timestamp != null) 'timestamp': timestamp,
       if (isMe != null) 'is_me': isMe,
+      if (channelIndex != null) 'channel_index': channelIndex,
     });
   }
 
@@ -345,6 +390,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     Value<String>? content,
     Value<DateTime>? timestamp,
     Value<bool>? isMe,
+    Value<int>? channelIndex,
   }) {
     return MessagesCompanion(
       id: id ?? this.id,
@@ -353,6 +399,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
       content: content ?? this.content,
       timestamp: timestamp ?? this.timestamp,
       isMe: isMe ?? this.isMe,
+      channelIndex: channelIndex ?? this.channelIndex,
     );
   }
 
@@ -377,6 +424,9 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     if (isMe.present) {
       map['is_me'] = Variable<bool>(isMe.value);
     }
+    if (channelIndex.present) {
+      map['channel_index'] = Variable<int>(channelIndex.value);
+    }
     return map;
   }
 
@@ -388,7 +438,8 @@ class MessagesCompanion extends UpdateCompanion<Message> {
           ..write('toId: $toId, ')
           ..write('content: $content, ')
           ..write('timestamp: $timestamp, ')
-          ..write('isMe: $isMe')
+          ..write('isMe: $isMe, ')
+          ..write('channelIndex: $channelIndex')
           ..write(')'))
         .toString();
   }
@@ -1039,16 +1090,307 @@ class NodesCompanion extends UpdateCompanion<Node> {
   }
 }
 
+class $ChannelsTable extends Channels with TableInfo<$ChannelsTable, Channel> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ChannelsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _indexMeta = const VerificationMeta('index');
+  @override
+  late final GeneratedColumn<int> index = GeneratedColumn<int>(
+    'index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pskMeta = const VerificationMeta('psk');
+  @override
+  late final GeneratedColumn<Uint8List> psk = GeneratedColumn<Uint8List>(
+    'psk',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [index, name, role, psk];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'channels';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Channel> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('index')) {
+      context.handle(
+        _indexMeta,
+        index.isAcceptableOrUnknown(data['index']!, _indexMeta),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+        _roleMeta,
+        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+      );
+    }
+    if (data.containsKey('psk')) {
+      context.handle(
+        _pskMeta,
+        psk.isAcceptableOrUnknown(data['psk']!, _pskMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {index};
+  @override
+  Channel map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Channel(
+      index: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}index'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      ),
+      psk: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}psk'],
+      ),
+    );
+  }
+
+  @override
+  $ChannelsTable createAlias(String alias) {
+    return $ChannelsTable(attachedDatabase, alias);
+  }
+}
+
+class Channel extends DataClass implements Insertable<Channel> {
+  final int index;
+  final String name;
+  final String? role;
+  final Uint8List? psk;
+  const Channel({required this.index, required this.name, this.role, this.psk});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['index'] = Variable<int>(index);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || role != null) {
+      map['role'] = Variable<String>(role);
+    }
+    if (!nullToAbsent || psk != null) {
+      map['psk'] = Variable<Uint8List>(psk);
+    }
+    return map;
+  }
+
+  ChannelsCompanion toCompanion(bool nullToAbsent) {
+    return ChannelsCompanion(
+      index: Value(index),
+      name: Value(name),
+      role: role == null && nullToAbsent ? const Value.absent() : Value(role),
+      psk: psk == null && nullToAbsent ? const Value.absent() : Value(psk),
+    );
+  }
+
+  factory Channel.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Channel(
+      index: serializer.fromJson<int>(json['index']),
+      name: serializer.fromJson<String>(json['name']),
+      role: serializer.fromJson<String?>(json['role']),
+      psk: serializer.fromJson<Uint8List?>(json['psk']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'index': serializer.toJson<int>(index),
+      'name': serializer.toJson<String>(name),
+      'role': serializer.toJson<String?>(role),
+      'psk': serializer.toJson<Uint8List?>(psk),
+    };
+  }
+
+  Channel copyWith({
+    int? index,
+    String? name,
+    Value<String?> role = const Value.absent(),
+    Value<Uint8List?> psk = const Value.absent(),
+  }) => Channel(
+    index: index ?? this.index,
+    name: name ?? this.name,
+    role: role.present ? role.value : this.role,
+    psk: psk.present ? psk.value : this.psk,
+  );
+  Channel copyWithCompanion(ChannelsCompanion data) {
+    return Channel(
+      index: data.index.present ? data.index.value : this.index,
+      name: data.name.present ? data.name.value : this.name,
+      role: data.role.present ? data.role.value : this.role,
+      psk: data.psk.present ? data.psk.value : this.psk,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Channel(')
+          ..write('index: $index, ')
+          ..write('name: $name, ')
+          ..write('role: $role, ')
+          ..write('psk: $psk')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(index, name, role, $driftBlobEquality.hash(psk));
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Channel &&
+          other.index == this.index &&
+          other.name == this.name &&
+          other.role == this.role &&
+          $driftBlobEquality.equals(other.psk, this.psk));
+}
+
+class ChannelsCompanion extends UpdateCompanion<Channel> {
+  final Value<int> index;
+  final Value<String> name;
+  final Value<String?> role;
+  final Value<Uint8List?> psk;
+  const ChannelsCompanion({
+    this.index = const Value.absent(),
+    this.name = const Value.absent(),
+    this.role = const Value.absent(),
+    this.psk = const Value.absent(),
+  });
+  ChannelsCompanion.insert({
+    this.index = const Value.absent(),
+    required String name,
+    this.role = const Value.absent(),
+    this.psk = const Value.absent(),
+  }) : name = Value(name);
+  static Insertable<Channel> custom({
+    Expression<int>? index,
+    Expression<String>? name,
+    Expression<String>? role,
+    Expression<Uint8List>? psk,
+  }) {
+    return RawValuesInsertable({
+      if (index != null) 'index': index,
+      if (name != null) 'name': name,
+      if (role != null) 'role': role,
+      if (psk != null) 'psk': psk,
+    });
+  }
+
+  ChannelsCompanion copyWith({
+    Value<int>? index,
+    Value<String>? name,
+    Value<String?>? role,
+    Value<Uint8List?>? psk,
+  }) {
+    return ChannelsCompanion(
+      index: index ?? this.index,
+      name: name ?? this.name,
+      role: role ?? this.role,
+      psk: psk ?? this.psk,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (index.present) {
+      map['index'] = Variable<int>(index.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (psk.present) {
+      map['psk'] = Variable<Uint8List>(psk.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ChannelsCompanion(')
+          ..write('index: $index, ')
+          ..write('name: $name, ')
+          ..write('role: $role, ')
+          ..write('psk: $psk')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $MessagesTable messages = $MessagesTable(this);
   late final $NodesTable nodes = $NodesTable(this);
+  late final $ChannelsTable channels = $ChannelsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [messages, nodes];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    messages,
+    nodes,
+    channels,
+  ];
 }
 
 typedef $$MessagesTableCreateCompanionBuilder =
@@ -1059,6 +1401,7 @@ typedef $$MessagesTableCreateCompanionBuilder =
       required String content,
       Value<DateTime> timestamp,
       Value<bool> isMe,
+      Value<int> channelIndex,
     });
 typedef $$MessagesTableUpdateCompanionBuilder =
     MessagesCompanion Function({
@@ -1068,6 +1411,7 @@ typedef $$MessagesTableUpdateCompanionBuilder =
       Value<String> content,
       Value<DateTime> timestamp,
       Value<bool> isMe,
+      Value<int> channelIndex,
     });
 
 class $$MessagesTableFilterComposer
@@ -1106,6 +1450,11 @@ class $$MessagesTableFilterComposer
 
   ColumnFilters<bool> get isMe => $composableBuilder(
     column: $table.isMe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get channelIndex => $composableBuilder(
+    column: $table.channelIndex,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1148,6 +1497,11 @@ class $$MessagesTableOrderingComposer
     column: $table.isMe,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get channelIndex => $composableBuilder(
+    column: $table.channelIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$MessagesTableAnnotationComposer
@@ -1176,6 +1530,11 @@ class $$MessagesTableAnnotationComposer
 
   GeneratedColumn<bool> get isMe =>
       $composableBuilder(column: $table.isMe, builder: (column) => column);
+
+  GeneratedColumn<int> get channelIndex => $composableBuilder(
+    column: $table.channelIndex,
+    builder: (column) => column,
+  );
 }
 
 class $$MessagesTableTableManager
@@ -1212,6 +1571,7 @@ class $$MessagesTableTableManager
                 Value<String> content = const Value.absent(),
                 Value<DateTime> timestamp = const Value.absent(),
                 Value<bool> isMe = const Value.absent(),
+                Value<int> channelIndex = const Value.absent(),
               }) => MessagesCompanion(
                 id: id,
                 fromId: fromId,
@@ -1219,6 +1579,7 @@ class $$MessagesTableTableManager
                 content: content,
                 timestamp: timestamp,
                 isMe: isMe,
+                channelIndex: channelIndex,
               ),
           createCompanionCallback:
               ({
@@ -1228,6 +1589,7 @@ class $$MessagesTableTableManager
                 required String content,
                 Value<DateTime> timestamp = const Value.absent(),
                 Value<bool> isMe = const Value.absent(),
+                Value<int> channelIndex = const Value.absent(),
               }) => MessagesCompanion.insert(
                 id: id,
                 fromId: fromId,
@@ -1235,6 +1597,7 @@ class $$MessagesTableTableManager
                 content: content,
                 timestamp: timestamp,
                 isMe: isMe,
+                channelIndex: channelIndex,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -1559,6 +1922,175 @@ typedef $$NodesTableProcessedTableManager =
       Node,
       PrefetchHooks Function()
     >;
+typedef $$ChannelsTableCreateCompanionBuilder =
+    ChannelsCompanion Function({
+      Value<int> index,
+      required String name,
+      Value<String?> role,
+      Value<Uint8List?> psk,
+    });
+typedef $$ChannelsTableUpdateCompanionBuilder =
+    ChannelsCompanion Function({
+      Value<int> index,
+      Value<String> name,
+      Value<String?> role,
+      Value<Uint8List?> psk,
+    });
+
+class $$ChannelsTableFilterComposer
+    extends Composer<_$AppDatabase, $ChannelsTable> {
+  $$ChannelsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get index => $composableBuilder(
+    column: $table.index,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get psk => $composableBuilder(
+    column: $table.psk,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ChannelsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ChannelsTable> {
+  $$ChannelsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get index => $composableBuilder(
+    column: $table.index,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get psk => $composableBuilder(
+    column: $table.psk,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ChannelsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ChannelsTable> {
+  $$ChannelsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get index =>
+      $composableBuilder(column: $table.index, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get psk =>
+      $composableBuilder(column: $table.psk, builder: (column) => column);
+}
+
+class $$ChannelsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ChannelsTable,
+          Channel,
+          $$ChannelsTableFilterComposer,
+          $$ChannelsTableOrderingComposer,
+          $$ChannelsTableAnnotationComposer,
+          $$ChannelsTableCreateCompanionBuilder,
+          $$ChannelsTableUpdateCompanionBuilder,
+          (Channel, BaseReferences<_$AppDatabase, $ChannelsTable, Channel>),
+          Channel,
+          PrefetchHooks Function()
+        > {
+  $$ChannelsTableTableManager(_$AppDatabase db, $ChannelsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ChannelsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ChannelsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ChannelsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> index = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> role = const Value.absent(),
+                Value<Uint8List?> psk = const Value.absent(),
+              }) => ChannelsCompanion(
+                index: index,
+                name: name,
+                role: role,
+                psk: psk,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> index = const Value.absent(),
+                required String name,
+                Value<String?> role = const Value.absent(),
+                Value<Uint8List?> psk = const Value.absent(),
+              }) => ChannelsCompanion.insert(
+                index: index,
+                name: name,
+                role: role,
+                psk: psk,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ChannelsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ChannelsTable,
+      Channel,
+      $$ChannelsTableFilterComposer,
+      $$ChannelsTableOrderingComposer,
+      $$ChannelsTableAnnotationComposer,
+      $$ChannelsTableCreateCompanionBuilder,
+      $$ChannelsTableUpdateCompanionBuilder,
+      (Channel, BaseReferences<_$AppDatabase, $ChannelsTable, Channel>),
+      Channel,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1567,4 +2099,6 @@ class $AppDatabaseManager {
       $$MessagesTableTableManager(_db, _db.messages);
   $$NodesTableTableManager get nodes =>
       $$NodesTableTableManager(_db, _db.nodes);
+  $$ChannelsTableTableManager get channels =>
+      $$ChannelsTableTableManager(_db, _db.channels);
 }

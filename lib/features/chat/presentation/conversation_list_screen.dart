@@ -14,6 +14,7 @@ class ConversationListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final nodesAsync = ref.watch(nodesProvider);
     final myNodeInfoAsync = ref.watch(myNodeInfoProvider);
+    final channelsAsync = ref.watch(channelsProvider); // Watch channels
     final myId = myNodeInfoAsync.value?.myNodeNum ?? 0;
 
     return Scaffold(
@@ -27,41 +28,52 @@ class ConversationListScreen extends ConsumerWidget {
           
           return ListView(
             children: [
-              // Primary Channel (Broadcast)
-              ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  child: const Icon(Icons.public),
-                ),
-                title: const Text("Primary Channel"),
-                subtitle: const Text("Broadcast to everyone"),
-                onTap: () {
-                   context.push('/chat/detail', extra: {
-                     'nodeId': 4294967295, // 0xFFFFFFFF
-                     'name': 'Primary Channel',
-                   });
-                },
-                onLongPress: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text("Clear Primary Channel?"),
-                      content: const Text("This will delete all broadcast messages."),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-                        TextButton(
-                          onPressed: () {
-                             ref.read(appDatabaseProvider).deleteMessagesForNode(4294967295);
-                             Navigator.pop(context);
-                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Broadcasts cleared")));
-                          },
-                          child: const Text("Clear", style: TextStyle(color: Colors.red)),
+              // Configured Channels
+              channelsAsync.when(
+                 data: (channels) {
+                   if (channels.isEmpty) {
+                      // Fallback if no channels fetched yet, show default Primary
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                          child: const Icon(Icons.public),
                         ),
-                      ],
-                    ),
-                  );
-                },
+                        title: const Text("Primary Channel"),
+                        subtitle: const Text("Broadcast (Default)"),
+                        onTap: () {
+                           context.push('/chat/detail', extra: {
+                             'nodeId': 4294967295, 
+                             'name': 'Primary Channel',
+                             'channelIndex': 0,
+                           });
+                        },
+                      );
+                   }
+                   return Column(
+                     children: channels.map((channel) {
+                       final name = channel.name.isNotEmpty ? channel.name : "Channel ${channel.index}";
+                       return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                          child: const Icon(Icons.tag), // Tag icon for channels
+                        ),
+                        title: Text(name),
+                        subtitle: Text(channel.role ?? "UNKNOWN"),
+                        onTap: () {
+                           context.push('/chat/detail', extra: {
+                             'nodeId': 4294967295, // Broadcast ID for channel messages mostly
+                             'name': name,
+                             'channelIndex': channel.index, // Pass channel index
+                           });
+                        },
+                       );
+                     }).toList(),
+                   );
+                 },
+                 loading: () => const LinearProgressIndicator(), 
+                 error: (_,__) => const SizedBox(),
               ),
               const Divider(),
               if (nodes.isEmpty)

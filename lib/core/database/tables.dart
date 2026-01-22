@@ -7,6 +7,7 @@ class Messages extends Table {
   TextColumn get content => text()();
   DateTimeColumn get timestamp => dateTime().withDefault(currentDateAndTime)();
   BoolColumn get isMe => boolean().withDefault(const Constant(false))();
+  IntColumn get channelIndex => integer().withDefault(const Constant(0))();
 }
 
 class Nodes extends Table {
@@ -30,4 +31,14 @@ class Nodes extends Table {
   
   @override
   Set<Column> get primaryKey => {num};
+}
+
+class Channels extends Table {
+  IntColumn get index => integer()(); // 0-7 usually
+  TextColumn get name => text()();
+  TextColumn get role => text().nullable()(); // PRIMARY, SECONDARY, etc.
+  BlobColumn get psk => blob().nullable()(); // Store PSK if needed, carefully
+  
+  @override
+  Set<Column> get primaryKey => {index};
 }

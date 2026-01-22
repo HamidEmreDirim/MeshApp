@@ -11,12 +11,12 @@ import 'tables.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [Messages, Nodes])
+@DriftDatabase(tables: [Messages, Nodes, Channels])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -35,9 +35,12 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 3) {
           // Schema v3: Added location
-          await m.addColumn(nodes, nodes.latitude);
-          await m.addColumn(nodes, nodes.longitude);
           await m.addColumn(nodes, nodes.altitude);
+        }
+        if (from < 4) {
+          // Schema v4: Added Channels table & channelIndex to Messages
+          await m.createTable(channels);
+          await m.addColumn(messages, messages.channelIndex);
         }
       },
     );
@@ -46,15 +49,17 @@ class AppDatabase extends _$AppDatabase {
   // Message CRUD
   Future<int> insertMessage(MessagesCompanion message) => into(messages).insert(message);
   
-  Stream<List<Message>> watchMessagesForNode(int targetNodeId, int myId) {
+  Stream<List<Message>> watchMessagesForNode(int targetNodeId, int myId, {int channelIndex = 0}) {
     if (targetNodeId == 4294967295) {
-       // Primary Channel (Broadcast): Show all messages to 4294967295
+       // Primary/Broadcast Channel: specific channel index
        return (select(messages)
-           ..where((t) => t.toId.equals(4294967295))
+           ..where((t) => t.toId.equals(4294967295) & t.channelIndex.equals(channelIndex))
            ..orderBy([(t) => OrderingTerm(expression: t.timestamp, mode: OrderingMode.desc)]))
            .watch();
     } else {
-      // Private Chat: either FROM target TO me, OR FROM me TO target
+      // Private Chat: ignore channelIndex usually (defaults to 0 or whatever)
+      // Or maybe we should enforce channelIndex? Usually DMs are on a specific channel/LoRa settings, 
+      // but in Meshtastic DMs are just to a node, traversing whatever path.
       return (select(messages)
           ..where((t) => 
               (t.fromId.equals(targetNodeId) & t.toId.equals(myId)) |
@@ -83,10 +88,9 @@ class AppDatabase extends _$AppDatabase {
     return (delete(nodes)..where((t) => t.num.equals(nodeId))).go();
   }
   
-  Future<void> deleteMessagesForNode(int nodeId) {
+  Future<void> deleteMessagesForNode(int nodeId, {int channelIndex = 0}) {
       if (nodeId == 4294967295) {
-        // Delete all broadcast messages? Maybe just clear them?
-        return (delete(messages)..where((t) => t.toId.equals(4294967295))).go();
+        return (delete(messages)..where((t) => t.toId.equals(4294967295) & t.channelIndex.equals(channelIndex))).go();
       } else {
         // Delete conversation where either sender is me and receiver is them, OR sender is them and receiver is me.
         // Actually for simplicity, we can just delete where fromId=nodeId OR toId=nodeId? 
@@ -100,6 +104,11 @@ class AppDatabase extends _$AppDatabase {
   Stream<Node?> watchNode(int nodeId) {
     return (select(nodes)..where((t) => t.num.equals(nodeId))).watchSingleOrNull();
   }
+
+  // Channel CRUD
+  Future<void> insertOrUpdateChannel(Channel channel) => into(channels).insertOnConflictUpdate(channel);
+  
+  Stream<List<Channel>> watchAllChannels() => select(channels).watch();
 }
 
 LazyDatabase _openConnection() {

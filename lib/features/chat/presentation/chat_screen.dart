@@ -13,11 +13,13 @@ import 'widgets/chat_bubble.dart';
 class ChatScreen extends HookConsumerWidget {
   final int targetNodeId;
   final String targetName;
+  final int channelIndex; // Add channelIndex
 
   const ChatScreen({
     super.key, 
     required this.targetNodeId,
     required this.targetName,
+    this.channelIndex = 0, // Default to 0
   });
 
   @override
@@ -28,7 +30,7 @@ class ChatScreen extends HookConsumerWidget {
     final myId = myNodeInfoAsync.value?.myNodeNum ?? 0;
     
     // Stream messages from DB
-    final messagesStream = useMemoized(() => db.watchMessagesForNode(targetNodeId, myId), [targetNodeId, myId]);
+    final messagesStream = useMemoized(() => db.watchMessagesForNode(targetNodeId, myId, channelIndex: channelIndex), [targetNodeId, myId, channelIndex]);
     final messagesAsync = useStream(messagesStream);
     
     final textController = useTextEditingController();
@@ -48,7 +50,7 @@ class ChatScreen extends HookConsumerWidget {
       final text = textController.text;
       if (text.trim().isEmpty) return;
 
-      bluetooth.sendMessageTo(text, targetNodeId);
+      bluetooth.sendMessageTo(text, targetNodeId, channelIndex: channelIndex);
       // DB persistence handled in service
       textController.clear();
     }
