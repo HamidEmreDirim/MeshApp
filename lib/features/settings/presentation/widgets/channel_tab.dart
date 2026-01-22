@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../gen/proto/meshtastic/channel.pb.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 class ChannelTab extends StatefulWidget {
   final int index;
@@ -67,21 +68,6 @@ class _ChannelTabState extends State<ChannelTab> with AutomaticKeepAliveClientMi
     });
   }
 
-  void _save() {
-    // Clone the channel to avoid mutating the original prop directly/unintentionally
-    final newChannel = widget.channel.deepCopy();
-    newChannel.role = _role;
-    
-    // Ensure settings object exists
-    if (!newChannel.hasSettings()) {
-      newChannel.settings = ChannelSettings();
-    }
-    
-    newChannel.settings.name = _nameController.text;
-    newChannel.settings.psk = _parsePsk(_pskController.text);
-
-    widget.onSave(newChannel);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -181,7 +167,7 @@ class _ChannelTabState extends State<ChannelTab> with AutomaticKeepAliveClientMi
                const SizedBox(width: 8),
                ElevatedButton(
                  onPressed: _generatePsk,
-                 style: ElevatedButton.styleFrom(
+                style: ElevatedButton.styleFrom(
                    backgroundColor: Colors.green, // Matching the web UI somewhat
                    foregroundColor: Colors.white,
                  ),
@@ -190,17 +176,85 @@ class _ChannelTabState extends State<ChannelTab> with AutomaticKeepAliveClientMi
              ],
            ),
            const SizedBox(height: 24),
-           SizedBox(
-             width: double.infinity,
-             child: ElevatedButton.icon(
-               onPressed: _save,
-               icon: const Icon(Icons.save),
-               label: const Text("Save Channel"),
-               style: ElevatedButton.styleFrom(
-                 padding: const EdgeInsets.symmetric(vertical: 16),
+           Row(
+             children: [
+               Expanded(
+                 child: OutlinedButton.icon(
+                   onPressed: _showQrCode,
+                   icon: const Icon(Icons.qr_code),
+                   label: const Text("Show QR"),
+                   style: OutlinedButton.styleFrom(
+                     padding: const EdgeInsets.symmetric(vertical: 16),
+                   ),
+                 ),
                ),
-             ),
+               const SizedBox(width: 16),
+               Expanded(
+                 child: ElevatedButton.icon(
+                   onPressed: _save,
+                   icon: const Icon(Icons.save),
+                   label: const Text("Save"),
+                   style: ElevatedButton.styleFrom(
+                     padding: const EdgeInsets.symmetric(vertical: 16),
+                   ),
+                 ),
+               ),
+             ],
            ),
+        ],
+      ),
+    );
+  }
+
+  Channel _getChannelFromInputs() {
+    final newChannel = widget.channel.deepCopy();
+    newChannel.role = _role;
+    
+    if (!newChannel.hasSettings()) {
+      newChannel.settings = ChannelSettings();
+    }
+    
+    newChannel.settings.name = _nameController.text;
+    newChannel.settings.psk = _parsePsk(_pskController.text);
+    return newChannel;
+  }
+
+  void _save() {
+    widget.onSave(_getChannelFromInputs());
+  }
+
+  void _showQrCode() {
+    final channel = _getChannelFromInputs();
+    final bytes = channel.writeToBuffer();
+    // Use standard Meshtastic URL format
+    String base64Data = base64UrlEncode(bytes).replaceAll('=', '');
+    final url = "https://meshtastic.org/e/#$base64Data";
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Channel ${channel.index} QR"),
+        content: Container(
+          width: 250,
+          height: 250,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: QrImageView(
+            data: url,
+            version: QrVersions.auto,
+            size: 250.0,
+            backgroundColor: Colors.white,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close"),
+          ),
         ],
       ),
     );
