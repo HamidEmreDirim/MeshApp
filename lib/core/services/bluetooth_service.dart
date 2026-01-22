@@ -59,6 +59,8 @@ class BluetoothService {
   final _messagesController = StreamController<MeshPacket>.broadcast();
   Stream<MeshPacket> get messages => _messagesController.stream;
 
+  bool _isFetchingChannels = false; // Flag to prevent concurrent fetches
+
   final _connectionStateController = StreamController<BluetoothConnectionState>.broadcast();
   Stream<BluetoothConnectionState> get connectionState => _connectionStateController.stream;
 
@@ -425,8 +427,15 @@ class BluetoothService {
   }
 
   Future<void> fetchConfiguredChannels() async {
+    if (_isFetchingChannels) {
+      log("Channel fetch already in progress, skipping.");
+      return;
+    }
+    _isFetchingChannels = true;
     log("Fetching configured channels...");
-    for (int i = 0; i < 8; i++) { // Meshtastic usually has up to 8 channels
+    
+    try {
+      for (int i = 0; i < 8; i++) { // Meshtastic usually has up to 8 channels
       final channel = await getChannel(i);
       log("Channel $i fetch result: ${channel?.settings.name}");
       if (channel != null && channel.role != pb.Channel_Role.DISABLED) {
@@ -441,7 +450,12 @@ class BluetoothService {
          log("Channel $i saved to DB");
       }
     }
-    log("Channel fetch complete");
+    } catch (e) {
+      log("Error fetching channels: $e");
+    } finally {
+      _isFetchingChannels = false;
+      log("Channel fetch complete");
+    }
   }
 
   Future<void> setChannel(pb.Channel channel) async {
@@ -450,6 +464,15 @@ class BluetoothService {
     
     await sendAdminMessage(req);
     // Ideally wait for confirmation but for now just send
+    
+    // Update local DB optimistically or to reflect what we sent
+    final driftChannel = Channel(
+        index: channel.index,
+        name: channel.settings.name,
+        role: channel.role.toString(),
+        psk: Uint8List.fromList(channel.settings.psk),
+    );
+     await _db.insertOrUpdateChannel(driftChannel);
   }
 
   Future<void> disconnect() async {

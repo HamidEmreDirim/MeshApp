@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/bluetooth_service.dart';
 import '../../../../gen/proto/meshtastic/channel.pb.dart';
+import '../../../../core/database/database.dart' as drift_db;
 import 'widgets/channel_tab.dart';
 
 class ChannelSettingsScreen extends ConsumerStatefulWidget {
@@ -13,53 +14,17 @@ class ChannelSettingsScreen extends ConsumerStatefulWidget {
 
 class _ChannelSettingsScreenState extends ConsumerState<ChannelSettingsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final Map<int, Channel> _channels = {};
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 8, vsync: this);
-    _loadChannels();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadChannels() async {
-    setState(() => _isLoading = true);
-    try {
-      final service = ref.read(bluetoothServiceProvider);
-      
-      // Execute requests sequentially with a delay to prevent flooding the device
-      for (int i = 0; i < 8; i++) {
-        // Add a small delay between requests to allow device to process
-        if (i > 0) await Future.delayed(const Duration(milliseconds: 300));
-        
-        final channel = await service.getChannel(i);
-        if (channel != null) {
-            _channels[i] = channel;
-        } else {
-             // Fallback for empty/unfetched channels
-            _channels[i] = Channel(
-              index: i,
-              role: Channel_Role.DISABLED,
-              settings: ChannelSettings(name: ""),
-            );
-        }
-        // Update UI progressively
-        if (mounted) setState(() {});
-      }
-    } catch (e) {
-      debugPrint("Error loading channels: $e");
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
   }
 
   Future<void> _onSaveChannel(Channel channel) async {
@@ -73,10 +38,7 @@ class _ChannelSettingsScreenState extends ConsumerState<ChannelSettingsScreen> w
            );
       }
       
-      // Update local state locally to reflect changes immediately
-      setState(() {
-        _channels[channel.index] = channel;
-      });
+      // No need to update local state, DB update will trigger re-build via provider
       
     } catch (e) {
        if (mounted) {
@@ -89,6 +51,8 @@ class _ChannelSettingsScreenState extends ConsumerState<ChannelSettingsScreen> w
 
   @override
   Widget build(BuildContext context) {
+    final channelsAsync = ref.watch(channelsProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Channel Config"),
@@ -96,30 +60,81 @@ class _ChannelSettingsScreenState extends ConsumerState<ChannelSettingsScreen> w
           controller: _tabController,
           isScrollable: true,
           tabs: [
-            for (int i = 0; i < 8; i++)
-               Tab(
-                 text: _channels[i]?.settings.name.isNotEmpty == true 
-                     ? "${i == 0 ? 'P' : i}: ${_channels[i]!.settings.name}" 
-                     : (i == 0 ? "Primary" : "Ch $i"),
-               ),
+            for (int i = 0; i < 8; i++) ...[
+               // We need to map from DB channels to tabs, or just show placeholders
+               // It's tricky because channelsAsync is a List of DB channels.
+               // We need to find if there is a channel for index i
+               _buildTab(channelsAsync, i),
+            ]
           ],
         ),
       ),
-      body: _isLoading && _channels.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
+      body: channelsAsync.when(
+        data: (dbChannels) {
+           return TabBarView(
               controller: _tabController,
               children: [
                  for (int i = 0; i < 8; i++)
-                   _channels.containsKey(i) 
-                       ? ChannelTab(
-                           index: i, 
-                           channel: _channels[i]!, 
-                           onSave: _onSaveChannel
-                         )
-                       : const Center(child: CircularProgressIndicator()),
+                   _buildChannelView(dbChannels, i),
               ],
-            ),
+            );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, st) => Center(child: Text("Error: $e")),
+      ),
     );
+  }
+
+  Widget _buildTab(AsyncValue<List<drift_db.Channel>> channelsAsync, int i) {
+     String text = (i == 0 ? "Primary" : "Ch $i");
+     
+     if (channelsAsync.hasValue) {
+        final dbChannels = channelsAsync.value!;
+        try {
+           final channel = dbChannels.firstWhere((c) => c.index == i);
+           if (channel.name.isNotEmpty) {
+              text = "${i == 0 ? 'P' : i}: ${channel.name}";
+           }
+        } catch (_) {}
+     }
+
+     return Tab(text: text);
+  }
+
+  Widget _buildChannelView(List<drift_db.Channel> dbChannels, int i) {
+      // Convert Drift Channel to Proto Channel for the widget
+      Channel? protoChannel;
+      try {
+         final dbChannel = dbChannels.firstWhere((c) => c.index == i);
+         protoChannel = Channel(
+            index: dbChannel.index,
+            role: _parseRole(dbChannel.role),
+            settings: ChannelSettings(
+               name: dbChannel.name,
+               psk: dbChannel.psk,
+            ),
+         );
+      } catch (_) {
+         // Default empty
+         protoChannel = Channel(
+            index: i,
+            role: Channel_Role.DISABLED,
+            settings: ChannelSettings(name: ""),
+         );
+      }
+
+      return ChannelTab(
+          index: i, 
+          channel: protoChannel, 
+          onSave: _onSaveChannel
+      );
+  }
+
+  Channel_Role _parseRole(String? roleStr) {
+     if (roleStr == null) return Channel_Role.DISABLED;
+     return Channel_Role.values.firstWhere(
+        (e) => e.toString() == roleStr, 
+        orElse: () => Channel_Role.DISABLED
+     );
   }
 }
