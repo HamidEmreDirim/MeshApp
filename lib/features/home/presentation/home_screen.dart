@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../map/application/location_broadcast_manager.dart';
+import '../../../core/services/bluetooth_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({
@@ -48,10 +49,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             initialLocation: index == widget.navigationShell.currentIndex,
           );
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble),
+            icon: Badge(
+              label: Consumer(
+                builder: (context, ref, child) {
+                  final count = ref.watch(unreadMessageCountProvider).asData?.value ?? 0;
+                  return count > 0 ? Text('$count') : const SizedBox.shrink();
+                },
+              ),
+              isLabelVisible: (ref.watch(unreadMessageCountProvider).asData?.value ?? 0) > 0,
+              child: const Icon(Icons.chat_bubble_outline),
+            ),
+            selectedIcon: Badge(
+               label: Consumer(
+                builder: (context, ref, child) {
+                  final count = ref.watch(unreadMessageCountProvider).asData?.value ?? 0;
+                  return count > 0 ? Text('$count') : const SizedBox.shrink();
+                },
+              ),
+              isLabelVisible: (ref.watch(unreadMessageCountProvider).asData?.value ?? 0) > 0,
+              child: const Icon(Icons.chat_bubble),
+            ),
             label: 'Chat',
           ),
           NavigationDestination(

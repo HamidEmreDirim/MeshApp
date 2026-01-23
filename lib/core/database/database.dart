@@ -16,7 +16,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -41,6 +41,10 @@ class AppDatabase extends _$AppDatabase {
           // Schema v4: Added Channels table & channelIndex to Messages
           await m.createTable(channels);
           await m.addColumn(messages, messages.channelIndex);
+        }
+        if (from < 5) {
+          // Schema v5: Added isRead to Messages
+          await m.addColumn(messages, messages.isRead);
         }
       },
     );
@@ -109,6 +113,50 @@ class AppDatabase extends _$AppDatabase {
   Future<void> insertOrUpdateChannel(Channel channel) => into(channels).insertOnConflictUpdate(channel);
   
   Stream<List<Channel>> watchAllChannels() => select(channels).watch();
+
+  // Notification / Unread helper methods
+  Stream<int> watchUnreadMessageCount() {
+    // Count messages where isMe is false and isRead is false
+    final countExpression = messages.id.count();
+    final query = selectOnly(messages)
+      ..addColumns([countExpression])
+      ..where(messages.isMe.equals(false) & messages.isRead.equals(false));
+    
+    return query.map((row) => row.read(countExpression) ?? 0).watchSingle();
+  }
+
+  Stream<int> watchUnreadMessageCountForNode(int nodeId) {
+     final countExpression = messages.id.count();
+    final query = selectOnly(messages)
+      ..addColumns([countExpression])
+      ..where(messages.isMe.equals(false) & messages.isRead.equals(false) & messages.fromId.equals(nodeId));
+    
+    return query.map((row) => row.read(countExpression) ?? 0).watchSingle();
+  }
+
+  Stream<int> watchUnreadMessageCountForChannel(int channelIndex) {
+     final countExpression = messages.id.count();
+    // For channels, we look for messages sent to broadcast (4294967295) on this channel
+    final query = selectOnly(messages)
+      ..addColumns([countExpression])
+      ..where(messages.isMe.equals(false) & messages.isRead.equals(false) & messages.toId.equals(4294967295) & messages.channelIndex.equals(channelIndex));
+    
+    return query.map((row) => row.read(countExpression) ?? 0).watchSingle();
+  }
+  
+  Future<void> markMessagesAsRead(int nodeId, {int channelIndex = 0}) async {
+    // If nodeId is broadcast (4294967295), we might want to mark all broadcast messages in that channel as read
+    if (nodeId == 4294967295) {
+        await (update(messages)
+          ..where((t) => t.toId.equals(4294967295) & t.channelIndex.equals(channelIndex) & t.isMe.equals(false)))
+          .write(MessagesCompanion(isRead: Value(true)));
+    } else {
+        // Mark all messages from this node as read
+        await (update(messages)
+          ..where((t) => t.fromId.equals(nodeId) & t.isMe.equals(false)))
+          .write(MessagesCompanion(isRead: Value(true)));
+    }
+  }
 }
 
 LazyDatabase _openConnection() {

@@ -87,6 +87,19 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _isReadMeta = const VerificationMeta('isRead');
+  @override
+  late final GeneratedColumn<bool> isRead = GeneratedColumn<bool>(
+    'is_read',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_read" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -96,6 +109,7 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     timestamp,
     isMe,
     channelIndex,
+    isRead,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -157,6 +171,12 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
         ),
       );
     }
+    if (data.containsKey('is_read')) {
+      context.handle(
+        _isReadMeta,
+        isRead.isAcceptableOrUnknown(data['is_read']!, _isReadMeta),
+      );
+    }
     return context;
   }
 
@@ -194,6 +214,10 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
         DriftSqlType.int,
         data['${effectivePrefix}channel_index'],
       )!,
+      isRead: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_read'],
+      )!,
     );
   }
 
@@ -211,6 +235,7 @@ class Message extends DataClass implements Insertable<Message> {
   final DateTime timestamp;
   final bool isMe;
   final int channelIndex;
+  final bool isRead;
   const Message({
     required this.id,
     required this.fromId,
@@ -219,6 +244,7 @@ class Message extends DataClass implements Insertable<Message> {
     required this.timestamp,
     required this.isMe,
     required this.channelIndex,
+    required this.isRead,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -230,6 +256,7 @@ class Message extends DataClass implements Insertable<Message> {
     map['timestamp'] = Variable<DateTime>(timestamp);
     map['is_me'] = Variable<bool>(isMe);
     map['channel_index'] = Variable<int>(channelIndex);
+    map['is_read'] = Variable<bool>(isRead);
     return map;
   }
 
@@ -242,6 +269,7 @@ class Message extends DataClass implements Insertable<Message> {
       timestamp: Value(timestamp),
       isMe: Value(isMe),
       channelIndex: Value(channelIndex),
+      isRead: Value(isRead),
     );
   }
 
@@ -258,6 +286,7 @@ class Message extends DataClass implements Insertable<Message> {
       timestamp: serializer.fromJson<DateTime>(json['timestamp']),
       isMe: serializer.fromJson<bool>(json['isMe']),
       channelIndex: serializer.fromJson<int>(json['channelIndex']),
+      isRead: serializer.fromJson<bool>(json['isRead']),
     );
   }
   @override
@@ -271,6 +300,7 @@ class Message extends DataClass implements Insertable<Message> {
       'timestamp': serializer.toJson<DateTime>(timestamp),
       'isMe': serializer.toJson<bool>(isMe),
       'channelIndex': serializer.toJson<int>(channelIndex),
+      'isRead': serializer.toJson<bool>(isRead),
     };
   }
 
@@ -282,6 +312,7 @@ class Message extends DataClass implements Insertable<Message> {
     DateTime? timestamp,
     bool? isMe,
     int? channelIndex,
+    bool? isRead,
   }) => Message(
     id: id ?? this.id,
     fromId: fromId ?? this.fromId,
@@ -290,6 +321,7 @@ class Message extends DataClass implements Insertable<Message> {
     timestamp: timestamp ?? this.timestamp,
     isMe: isMe ?? this.isMe,
     channelIndex: channelIndex ?? this.channelIndex,
+    isRead: isRead ?? this.isRead,
   );
   Message copyWithCompanion(MessagesCompanion data) {
     return Message(
@@ -302,6 +334,7 @@ class Message extends DataClass implements Insertable<Message> {
       channelIndex: data.channelIndex.present
           ? data.channelIndex.value
           : this.channelIndex,
+      isRead: data.isRead.present ? data.isRead.value : this.isRead,
     );
   }
 
@@ -314,14 +347,23 @@ class Message extends DataClass implements Insertable<Message> {
           ..write('content: $content, ')
           ..write('timestamp: $timestamp, ')
           ..write('isMe: $isMe, ')
-          ..write('channelIndex: $channelIndex')
+          ..write('channelIndex: $channelIndex, ')
+          ..write('isRead: $isRead')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, fromId, toId, content, timestamp, isMe, channelIndex);
+  int get hashCode => Object.hash(
+    id,
+    fromId,
+    toId,
+    content,
+    timestamp,
+    isMe,
+    channelIndex,
+    isRead,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -332,7 +374,8 @@ class Message extends DataClass implements Insertable<Message> {
           other.content == this.content &&
           other.timestamp == this.timestamp &&
           other.isMe == this.isMe &&
-          other.channelIndex == this.channelIndex);
+          other.channelIndex == this.channelIndex &&
+          other.isRead == this.isRead);
 }
 
 class MessagesCompanion extends UpdateCompanion<Message> {
@@ -343,6 +386,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
   final Value<DateTime> timestamp;
   final Value<bool> isMe;
   final Value<int> channelIndex;
+  final Value<bool> isRead;
   const MessagesCompanion({
     this.id = const Value.absent(),
     this.fromId = const Value.absent(),
@@ -351,6 +395,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     this.timestamp = const Value.absent(),
     this.isMe = const Value.absent(),
     this.channelIndex = const Value.absent(),
+    this.isRead = const Value.absent(),
   });
   MessagesCompanion.insert({
     this.id = const Value.absent(),
@@ -360,6 +405,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     this.timestamp = const Value.absent(),
     this.isMe = const Value.absent(),
     this.channelIndex = const Value.absent(),
+    this.isRead = const Value.absent(),
   }) : fromId = Value(fromId),
        toId = Value(toId),
        content = Value(content);
@@ -371,6 +417,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     Expression<DateTime>? timestamp,
     Expression<bool>? isMe,
     Expression<int>? channelIndex,
+    Expression<bool>? isRead,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -380,6 +427,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
       if (timestamp != null) 'timestamp': timestamp,
       if (isMe != null) 'is_me': isMe,
       if (channelIndex != null) 'channel_index': channelIndex,
+      if (isRead != null) 'is_read': isRead,
     });
   }
 
@@ -391,6 +439,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     Value<DateTime>? timestamp,
     Value<bool>? isMe,
     Value<int>? channelIndex,
+    Value<bool>? isRead,
   }) {
     return MessagesCompanion(
       id: id ?? this.id,
@@ -400,6 +449,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
       timestamp: timestamp ?? this.timestamp,
       isMe: isMe ?? this.isMe,
       channelIndex: channelIndex ?? this.channelIndex,
+      isRead: isRead ?? this.isRead,
     );
   }
 
@@ -427,6 +477,9 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     if (channelIndex.present) {
       map['channel_index'] = Variable<int>(channelIndex.value);
     }
+    if (isRead.present) {
+      map['is_read'] = Variable<bool>(isRead.value);
+    }
     return map;
   }
 
@@ -439,7 +492,8 @@ class MessagesCompanion extends UpdateCompanion<Message> {
           ..write('content: $content, ')
           ..write('timestamp: $timestamp, ')
           ..write('isMe: $isMe, ')
-          ..write('channelIndex: $channelIndex')
+          ..write('channelIndex: $channelIndex, ')
+          ..write('isRead: $isRead')
           ..write(')'))
         .toString();
   }
@@ -1402,6 +1456,7 @@ typedef $$MessagesTableCreateCompanionBuilder =
       Value<DateTime> timestamp,
       Value<bool> isMe,
       Value<int> channelIndex,
+      Value<bool> isRead,
     });
 typedef $$MessagesTableUpdateCompanionBuilder =
     MessagesCompanion Function({
@@ -1412,6 +1467,7 @@ typedef $$MessagesTableUpdateCompanionBuilder =
       Value<DateTime> timestamp,
       Value<bool> isMe,
       Value<int> channelIndex,
+      Value<bool> isRead,
     });
 
 class $$MessagesTableFilterComposer
@@ -1455,6 +1511,11 @@ class $$MessagesTableFilterComposer
 
   ColumnFilters<int> get channelIndex => $composableBuilder(
     column: $table.channelIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isRead => $composableBuilder(
+    column: $table.isRead,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1502,6 +1563,11 @@ class $$MessagesTableOrderingComposer
     column: $table.channelIndex,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isRead => $composableBuilder(
+    column: $table.isRead,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$MessagesTableAnnotationComposer
@@ -1535,6 +1601,9 @@ class $$MessagesTableAnnotationComposer
     column: $table.channelIndex,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isRead =>
+      $composableBuilder(column: $table.isRead, builder: (column) => column);
 }
 
 class $$MessagesTableTableManager
@@ -1572,6 +1641,7 @@ class $$MessagesTableTableManager
                 Value<DateTime> timestamp = const Value.absent(),
                 Value<bool> isMe = const Value.absent(),
                 Value<int> channelIndex = const Value.absent(),
+                Value<bool> isRead = const Value.absent(),
               }) => MessagesCompanion(
                 id: id,
                 fromId: fromId,
@@ -1580,6 +1650,7 @@ class $$MessagesTableTableManager
                 timestamp: timestamp,
                 isMe: isMe,
                 channelIndex: channelIndex,
+                isRead: isRead,
               ),
           createCompanionCallback:
               ({
@@ -1590,6 +1661,7 @@ class $$MessagesTableTableManager
                 Value<DateTime> timestamp = const Value.absent(),
                 Value<bool> isMe = const Value.absent(),
                 Value<int> channelIndex = const Value.absent(),
+                Value<bool> isRead = const Value.absent(),
               }) => MessagesCompanion.insert(
                 id: id,
                 fromId: fromId,
@@ -1598,6 +1670,7 @@ class $$MessagesTableTableManager
                 timestamp: timestamp,
                 isMe: isMe,
                 channelIndex: channelIndex,
+                isRead: isRead,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

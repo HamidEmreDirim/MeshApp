@@ -8,6 +8,7 @@ class Messages extends Table {
   DateTimeColumn get timestamp => dateTime().withDefault(currentDateAndTime)();
   BoolColumn get isMe => boolean().withDefault(const Constant(false))();
   IntColumn get channelIndex => integer().withDefault(const Constant(0))();
+  BoolColumn get isRead => boolean().withDefault(const Constant(false))();
 }
 
 class Nodes extends Table {

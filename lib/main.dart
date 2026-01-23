@@ -4,8 +4,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 
-void main() {
-  runApp(const ProviderScope(child: MyApp()));
+import 'core/services/notification_service.dart';
+import 'core/services/bluetooth_service.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final notificationService = NotificationService();
+  await notificationService.init();
+  
+  runApp(ProviderScope(
+    overrides: [
+      notificationServiceProvider.overrideWithValue(notificationService),
+    ],
+    child: const MyApp(),
+  ));
 }
 
 class MyApp extends ConsumerWidget {

@@ -40,8 +40,8 @@ class ChatScreen extends HookConsumerWidget {
     
     useEffect(() {
       if (messagesAsync.hasData && messagesAsync.data!.isNotEmpty) {
-        // scrollController.jumpTo(scrollController.position.maxScrollExtent);
-        // Or animate, maybe better to just jump on load
+        // Mark as read
+        db.markMessagesAsRead(targetNodeId, channelIndex: channelIndex);
       }
       return null;
     }, [messagesAsync.data?.length]);

@@ -14,11 +14,17 @@ import '../../gen/proto/meshtastic/admin.pb.dart';
 import '../../gen/proto/meshtastic/channel.pb.dart' as pb;
 
 import '../database/database.dart';
+import 'notification_service.dart';
+
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  throw UnimplementedError('notificationServiceProvider overrides required');
+});
 
 
 final bluetoothServiceProvider = Provider<BluetoothService>((ref) {
    final db = ref.watch(appDatabaseProvider);
-   return BluetoothService(db);
+   final notificationService = ref.watch(notificationServiceProvider);
+   return BluetoothService(db, notificationService);
 });
 
 final connectionStateProvider = StreamProvider<BluetoothConnectionState>((ref) {
@@ -38,10 +44,23 @@ final channelsProvider = StreamProvider<List<Channel>>((ref) {
   return ref.watch(appDatabaseProvider).watchAllChannels();
 });
 
+final unreadMessageCountProvider = StreamProvider<int>((ref) {
+  return ref.watch(appDatabaseProvider).watchUnreadMessageCount();
+});
+
+final unreadMessageCountForNodeProvider = StreamProvider.family<int, int>((ref, nodeId) {
+  return ref.watch(appDatabaseProvider).watchUnreadMessageCountForNode(nodeId);
+});
+
+final unreadMessageCountForChannelProvider = StreamProvider.family<int, int>((ref, channelIndex) {
+  return ref.watch(appDatabaseProvider).watchUnreadMessageCountForChannel(channelIndex);
+});
+
 class BluetoothService {
   final AppDatabase _db;
+  final NotificationService _notificationService;
   
-  BluetoothService(this._db) {
+  BluetoothService(this._db, this._notificationService) {
     FlutterBluePlus.setLogLevel(LogLevel.error, color: false);
   }
 
@@ -141,21 +160,21 @@ class BluetoothService {
   }
 
   Future<void> _initializeConnection() async {
-    print("DEBUG: Initializing connection: subscribing to FromNum");
+    log("DEBUG: Initializing connection: subscribing to FromNum");
     await _fromNumChar!.setNotifyValue(true);
     _fromNumChar!.onValueReceived.listen((value) async {
-       print("DEBUG: FromNum notification received: $value");
+       log("DEBUG: FromNum notification received: $value");
        await _readFromRadio();
     });
 
-    print("DEBUG: Sending want_config_id to ToRadio");
+    log("DEBUG: Sending want_config_id to ToRadio");
     final packet = ToRadio();
     packet.wantConfigId = 12345;
     await _toRadioChar!.write(packet.writeToBuffer());
-    print("DEBUG: Sent want_config_id");
+    log("DEBUG: Sent want_config_id");
     
     // Kickstart read just in case
-    print("DEBUG: Doing initial read kick...");
+    log("DEBUG: Doing initial read kick...");
     await _readFromRadio();
     
     // Fetch channels in background
@@ -168,24 +187,24 @@ class BluetoothService {
     // Read loop
     while (true) {
       try {
-        print("DEBUG: Reading FromRadio...");
+        log("DEBUG: Reading FromRadio...");
         List<int> value = await _fromRadioChar!.read();
         if (value.isEmpty) {
-          print("DEBUG: FromRadio empty, stopping read loop");
+          log("DEBUG: FromRadio empty, stopping read loop");
           break;
         }
         
         // Log raw received data
         final hexData = value.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
-        print("DEBUG: Received Raw Data: $hexData");
+        log("DEBUG: Received Raw Data: $hexData");
         
         // Log ASCII representation
         final asciiData = String.fromCharCodes(value.map((c) => c < 32 || c > 126 ? 46 : c));
-        print("DEBUG: ASCII: $asciiData");
+        log("DEBUG: ASCII: $asciiData");
 
         final fromRadio = FromRadio.fromBuffer(value);
-        print("DEBUG: Parsed FromRadio: $fromRadio");
-        print("DEBUG: Received FromRadio packet. Has packet: ${fromRadio.hasPacket()}");
+        log("DEBUG: Parsed FromRadio: $fromRadio");
+        log("DEBUG: Received FromRadio packet. Has packet: ${fromRadio.hasPacket()}");
         
         if (fromRadio.hasPacket()) {
           final packet = fromRadio.packet;
@@ -201,6 +220,16 @@ class BluetoothService {
                 timestamp: Value(DateTime.now()),
                 channelIndex: Value(packet.channel), // Save the channel index
               ));
+              
+              // Show Notification if needed
+              // TODO: Check if we are currently in this chat? For now, just show notification.
+              // Future improvement: check app lifecycle state or current route.
+              _notificationService.showNotification(
+                id: packet.from, 
+                title: "New Message from ${packet.from}", 
+                body: text,
+                payload: packet.from.toString(),
+              );
           } else if (packet.decoded.portnum == PortNum.POSITION_APP) {
              try {
                 final position = Position.fromBuffer(packet.decoded.payload);

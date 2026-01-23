@@ -7,15 +7,26 @@ import '../../../core/services/bluetooth_service.dart';
 import '../../../core/database/database.dart';
 
 
+import 'widgets/channel_list_item.dart';
+import 'widgets/conversation_list_item.dart';
+
+final allNodesProvider = StreamProvider<List<Node>>((ref) {
+  return ref.watch(appDatabaseProvider).watchAllNodes();
+});
+
 class ConversationListScreen extends ConsumerWidget {
   const ConversationListScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final nodesAsync = ref.watch(nodesProvider);
+    final nodesAsync = ref.watch(allNodesProvider);
     final myNodeInfoAsync = ref.watch(myNodeInfoProvider);
     final channelsAsync = ref.watch(channelsProvider); // Watch channels
     final myId = myNodeInfoAsync.value?.myNodeNum ?? 0;
+    
+
+    
+
 
     return Scaffold(
       appBar: AppBar(
@@ -23,8 +34,8 @@ class ConversationListScreen extends ConsumerWidget {
         centerTitle: false,
       ),
       body: nodesAsync.when(
-        data: (nodesMap) {
-          final nodes = nodesMap.values.toList();
+        data: (nodes) {
+          // final nodes = nodesMap.values.toList(); // No map anymore
           
           return ListView(
             children: [
@@ -46,34 +57,17 @@ class ConversationListScreen extends ConsumerWidget {
                              'nodeId': 4294967295, 
                              'name': 'Primary Channel',
                              'channelIndex': 0,
+                             'role': 'PRIMARY',
                            });
                         },
                       );
                    }
                    return Column(
-                     children: channels.map((channel) {
-                       final name = channel.name.isNotEmpty ? channel.name : "Channel ${channel.index}";
-                       return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                          child: const Icon(Icons.tag), // Tag icon for channels
-                        ),
-                        title: Text(name),
-                        subtitle: Text(channel.role ?? "UNKNOWN"),
-                        onTap: () {
-                           context.push('/chat/detail', extra: {
-                             'nodeId': 4294967295, // Broadcast ID for channel messages mostly
-                             'name': name,
-                             'channelIndex': channel.index, // Pass channel index
-                           });
-                        },
-                       );
-                     }).toList(),
+                     children: channels.map((channel) => ChannelListItem(channel: channel)).toList(),
                    );
                  },
                  loading: () => const LinearProgressIndicator(), 
-                 error: (_,__) => const SizedBox(),
+                 error: (_, __) => const SizedBox(),
               ),
               const Divider(),
               if (nodes.isEmpty)
@@ -83,49 +77,7 @@ class ConversationListScreen extends ConsumerWidget {
                  ),
 
               // Discovered Nodes
-              ...nodes.where((n) => n.num != myId).map((node) {
-                 final name = node.user.longName.isNotEmpty 
-                    ? node.user.longName 
-                    : node.user.shortName.isNotEmpty 
-                        ? node.user.shortName
-                        : "!${node.num.toRadixString(16).padLeft(8,'0').substring(4)}";
-                        
-                 return ListTile(
-                   leading: CircleAvatar(
-                     backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                     child: Text(node.user.shortName.isNotEmpty ? node.user.shortName.substring(0,2).toUpperCase() : "?"),
-                   ),
-                   title: Text(name),
-                   subtitle: Text("ID: !${node.num.toRadixString(16).padLeft(8, '0').substring(4)}"),
-                   onTap: () {
-                     context.push('/chat/detail', extra: {
-                       'nodeId': node.num,
-                       'name': name,
-                       'user_short_name': node.user.shortName, // pass for avatar if needed
-                     });
-                   },
-                   onLongPress: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: Text("Delete chat with $name?"),
-                          content: const Text("This will permanently delete the conversation history."),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-                            TextButton(
-                              onPressed: () {
-                                 ref.read(appDatabaseProvider).deleteMessagesForNode(node.num);
-                                 Navigator.pop(context);
-                                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Conversation deleted")));
-                              },
-                              child: const Text("Delete", style: TextStyle(color: Colors.red)),
-                            ),
-                          ],
-                        ),
-                      );
-                   },
-                 );
-              }),
+              ...nodes.where((n) => n.num != myId).map((node) => ConversationListItem(node: node)),
             ],
           );
         },
@@ -135,3 +87,4 @@ class ConversationListScreen extends ConsumerWidget {
     );
   }
 }
+
