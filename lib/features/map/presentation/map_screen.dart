@@ -1,9 +1,7 @@
-import 'dart:ui';
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/database/database.dart';
@@ -18,130 +16,113 @@ class MapScreen extends ConsumerStatefulWidget {
 }
 
 class _MapScreenState extends ConsumerState<MapScreen> {
-  final MapController _mapController = MapController();
+  final Completer<GoogleMapController> _controller = Completer();
+  
+  // Custom marker icons
+  BitmapDescriptor? _userIcon;
+  BitmapDescriptor? _nodeIcon;
+  BitmapDescriptor? _sharedIcon;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCustomMarkers();
+  }
+
+  Future<void> _loadCustomMarkers() async {
+    // You can load custom assets here. For now using default hues.
+    // If you want to use assets, replace with BitmapDescriptor.fromAssetImage(...)
+    // Ensure you add them to pubspec.yaml assets section first.
+    
+    // Example of a cleaner look using default markers with specific hues
+    setState(() {
+      _userIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+      _nodeIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed); 
+      _sharedIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final locationStateAsync = ref.watch(displayLocationProvider);
     final meshNodesAsync = ref.watch(meshNodesWithLocationProvider);
     final mapLayer = ref.watch(mapLayerProvider);
-    
-    // Watch for shared location requests from Chat
-    ref.listen(sharedLocationTargetProvider, (previous, next) {
-      if (next != null) {
-        _mapController.move(next, 16.0);
-        // We could also add a temporary marker here if we want, 
-        // but for now centering is the MVP step.
-        // To show a marker, we might want a local state variable "temporaryMarkerLocation"
-        // Let's add that logic below if desired, but centering is main requirement "open map and show the shared location".
-      }
-    });
-    
-    // We also read the provider directly to show the marker if it persists? 
-    // Usually we want to clear it after some time or just keep it until user moves.
     final sharedLocation = ref.watch(sharedLocationTargetProvider);
 
     final userLocation = locationStateAsync.value?.location;
     final source = locationStateAsync.value?.source ?? LocationSource.none;
 
+    // Listen for shared location requests to move camera
+    ref.listen(sharedLocationTargetProvider, (previous, next) async {
+      if (next != null) {
+        final controller = await _controller.future;
+        controller.animateCamera(CameraUpdate.newLatLngZoom(next, 16));
+      }
+    });
+
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Full Screen Map
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: userLocation ?? const LatLng(0, 0),
-              initialZoom: 15.0,
-              onLongPress: (tapPosition, point) {
-                _showShareLocationSheet(context, point);
-              },
+          GoogleMap(
+            mapType: _getMapType(mapLayer),
+            initialCameraPosition: CameraPosition(
+              target: userLocation ?? const LatLng(0, 0),
+              zoom: 15,
             ),
-            children: [
-              _buildTileLayer(mapLayer),
-
-              // User Location Marker
-              if (userLocation != null)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: userLocation,
-                      width: 80,
-                      height: 80,
-                      child: _buildUserMarker(source),
-                    ),
-                  ],
-                ),
-
-              // Mesh Nodes Markers
-              if (meshNodesAsync.value != null)
-                MarkerLayer(
-                  markers: meshNodesAsync.value!.map((node) {
-                    return Marker(
-                      point: LatLng(node.latitude!, node.longitude!),
-                      width: 100,
-                      height: 80,
-                      child: _buildNodeMarker(node),
-                    );
-                  }).toList(),
-                ),
-                
-              // Shared Location Marker (Transient)
-              if (sharedLocation != null)
-                 MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: sharedLocation,
-                      width: 60,
-                      height: 60,
-                      child: const Icon(Icons.location_on, color: Colors.purple, size: 50),
-                    ),
-                  ],
-                ),
-            ],
+            onMapCreated: (GoogleMapController controller) {
+              if (!_controller.isCompleted) {
+                _controller.complete(controller);
+              }
+            },
+            myLocationEnabled: source == LocationSource.phone, // Show blue dot if using phone GPS
+            myLocationButtonEnabled: false, // We use custom button
+            zoomControlsEnabled: false,
+            onLongPress: (LatLng point) {
+              _showShareLocationSheet(context, point);
+            },
+            markers: _buildMarkers(userLocation, source, meshNodesAsync.value, sharedLocation),
           ),
 
-          // 2. Floating Layer Switcher (Top Right)
+          // Layer Switcher
           Positioned(
             top: 60,
             right: 20,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20), // Match FAB radius
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.8), // Match FAB opacity
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: _buildLayerSwitcher(ref, mapLayer),
-                ),
-              ),
-            ),
+            child: _buildLayerSwitcher(ref, mapLayer),
           ),
 
-          // 3. Floating Action Buttons (Recenter)
+          // FABs
           Positioned(
             bottom: 30,
             right: 20,
-            child: _buildFloatingButton(
-              icon: Icons.my_location_rounded,
-              onPressed: () {
-                if (userLocation != null) {
-                  _mapController.move(userLocation, 16.0);
-                }
-              },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (sharedLocation != null) ...[
+                   _buildFloatingButton(
+                    icon: Icons.location_searching,
+                    onPressed: () async {
+                      final controller = await _controller.future;
+                      controller.animateCamera(CameraUpdate.newLatLngZoom(sharedLocation, 16));
+                    },
+                    tooltip: "Show Shared Location",
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                _buildFloatingButton(
+                  icon: Icons.my_location_rounded,
+                  onPressed: () async {
+                    if (userLocation != null) {
+                      final controller = await _controller.future;
+                      controller.animateCamera(CameraUpdate.newLatLngZoom(userLocation, 16));
+                    }
+                  },
+                  tooltip: "My Location",
+                ),
+              ],
             ),
           ),
-          
-          // 4. Location Source Info (Optional: Show if using Device GPS)
+
+          // Location Source Indicator
           if (source == LocationSource.device)
             Positioned(
               bottom: 100,
@@ -149,15 +130,68 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               child: Container(
                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                  decoration: BoxDecoration(
-                   color: Colors.green.withValues(alpha: 0.8),
+                   color: Colors.green.withValues(alpha: 0.9),
                    borderRadius: BorderRadius.circular(20),
+                   boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
                  ),
-                 child: const Text("Using Device GPS", style: TextStyle(color: Colors.white, fontSize: 12)),
+                 child: const Text("Using Device GPS", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
               ),
             ),
         ],
       ),
     );
+  }
+
+  Set<Marker> _buildMarkers(LatLng? userLocation, LocationSource source, List<Node>? nodes, LatLng? sharedLocation) {
+    final markers = <Marker>{};
+
+    // User Marker (only if NOT using phone GPS, because phone GPS shows the native blue dot via myLocationEnabled)
+    if (userLocation != null && source == LocationSource.device) {
+      markers.add(Marker(
+        markerId: const MarkerId('user_device_location'),
+        position: userLocation,
+        icon: _userIcon ?? BitmapDescriptor.defaultMarker,
+        infoWindow: const InfoWindow(title: 'My Device'),
+      ));
+    }
+
+    // Nodes
+    if (nodes != null) {
+      for (final node in nodes) {
+        markers.add(Marker(
+          markerId: MarkerId('node_${node.num}'),
+          position: LatLng(node.latitude!, node.longitude!),
+          icon: _nodeIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          infoWindow: InfoWindow(
+            title: node.longName ?? node.shortName ?? 'Node ${node.num}',
+            snippet: node.shortName,
+          ),
+        ));
+      }
+    }
+
+    // Shared Location
+    if (sharedLocation != null) {
+      markers.add(Marker(
+        markerId: const MarkerId('shared_location'),
+        position: sharedLocation,
+        icon: _sharedIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueMagenta),
+        infoWindow: const InfoWindow(title: 'Shared Location'),
+      ));
+    }
+
+    return markers;
+  }
+
+  MapType _getMapType(MapLayerType type) {
+    switch (type) {
+      case MapLayerType.normal:
+        return MapType.normal;
+      case MapLayerType.satellite:
+        return MapType.hybrid; // Hybrid is usually better for satellite views users actually want (with labels)
+      case MapLayerType.terrain:
+        return MapType.terrain;
+    }
   }
 
   void _showShareLocationSheet(BuildContext context, LatLng point) {
@@ -172,88 +206,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  Widget _buildUserMarker(LocationSource source) {
-    final color = source == LocationSource.phone ? Colors.blue : Colors.green;
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.3),
-            shape: BoxShape.circle,
-          ),
-        ).animate(onPlay: (controller) => controller.repeat())
-         .scale(duration: 2.seconds, begin: const Offset(0.5, 0.5), end: const Offset(1.5, 1.5))
-         .fadeOut(duration: 2.seconds),
-        Container(
-          width: 20,
-          height: 20,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 3),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNodeMarker(Node node) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Text(
-            node.shortName ?? node.num.toString(),
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        const SizedBox(height: 4),
-        const Icon(
-          Icons.location_on_rounded,
-          color: Colors.redAccent,
-          size: 40,
-        ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
-      ],
-    );
-  }
-
   Widget _buildLayerSwitcher(WidgetRef ref, MapLayerType currentLayer) {
     return PopupMenuButton<MapLayerType>(
-      icon: const Padding(
-        padding: EdgeInsets.all(8.0),
-        child: Icon(Icons.layers_outlined, color: Colors.black87, size: 28),
+      icon: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
+        ),
+        child: const Icon(Icons.layers_outlined, color: Colors.black87, size: 24),
       ),
-      elevation: 10,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      color: Colors.white.withValues(alpha: 0.95),
-      offset: const Offset(0, 50),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       onSelected: (MapLayerType type) {
         ref.read(mapLayerProvider.notifier).setType(type);
       },
@@ -285,55 +250,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  Widget _buildFloatingButton({required IconData icon, required VoidCallback onPressed}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onPressed,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Icon(icon, color: Colors.black87, size: 28),
-              ),
-            ),
-          ),
+  Widget _buildFloatingButton({required IconData icon, required VoidCallback onPressed, String? tooltip}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: IconButton(
+          icon: Icon(icon, color: Colors.black87),
+          onPressed: onPressed,
+          tooltip: tooltip,
+          padding: const EdgeInsets.all(12),
+          iconSize: 28,
         ),
       ),
     );
-  }
-
-  Widget _buildTileLayer(MapLayerType type) {
-    switch (type) {
-      case MapLayerType.satellite:
-        return TileLayer(
-          urlTemplate: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-          userAgentPackageName: 'com.example.mesh_app',
-        );
-      case MapLayerType.terrain:
-        return TileLayer(
-          urlTemplate: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.example.mesh_app',
-        );
-      case MapLayerType.normal:
-        return TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.example.mesh_app',
-        );
-    }
   }
 }
